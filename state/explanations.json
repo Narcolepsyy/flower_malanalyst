@@ -1,0 +1,57 @@
+{
+  "round": 3,
+  "model_type": "mlp",
+  "model_weights": "state/latest_model.npz",
+  "method": "auto",
+  "background_size": 256,
+  "top_features": [
+    {
+      "feature": "svcscan.process_services",
+      "score": 3.0145627079036785e-06
+    },
+    {
+      "feature": "handles.nmutant",
+      "score": 2.268198159072199e-06
+    },
+    {
+      "feature": "svcscan.nservices",
+      "score": 2.1822063445142703e-06
+    },
+    {
+      "feature": "pslist.avg_threads",
+      "score": 2.154102048734785e-06
+    },
+    {
+      "feature": "pslist.nppid",
+      "score": 1.992646048165625e-06
+    },
+    {
+      "feature": "svcscan.shared_process_services",
+      "score": 1.979806938834372e-06
+    },
+    {
+      "feature": "dlllist.avg_dlls_per_proc",
+      "score": 1.5679472653573612e-06
+    },
+    {
+      "feature": "handles.nevent",
+      "score": 1.552392518533452e-06
+    },
+    {
+      "feature": "handles.nthread",
+      "score": 1.522648858554021e-06
+    },
+    {
+      "feature": "svcscan.kernel_drivers",
+      "score": 1.3623516679217573e-06
+    },
+    {
+      "feature": "ldrmodules.not_in_mem",
+      "score": 1.2654126066991012e-06
+    },
+    {
+      "feature": "malfind.protection",
+      "score": 1.2015284482913557e-06
+    }
+  ]
+}
