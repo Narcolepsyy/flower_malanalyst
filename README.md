@@ -61,3 +61,66 @@ Visit http://localhost:8501 to see loss/accuracy/F1 charts; it polls `state/metr
 - `client.py`: Flower NumPyClient implementation returning richer metrics; supports `logreg` (NumPy) and `mlp` (PyTorch).
 - `dashboard_flask.py`: Flask monitoring UI (polls `state/metrics.json` and renders Plotly charts).
 - `state/metrics.json`: Created/updated by the server after each evaluation aggregation.
+
+### Non-IID Data Distribution
+
+Demonstrate FL challenges with heterogeneous data using Dirichlet-based partitioning:
+
+```bash
+# Low alpha = highly skewed data per client (more challenging)
+python client.py --cid 0 --num-clients 2 --partition-method noniid --noniid-alpha 0.1
+
+# High alpha = nearly IID (easier convergence)
+python client.py --cid 0 --num-clients 2 --partition-method noniid --noniid-alpha 10.0
+```
+
+Alpha values:
+- `0.1`: Highly heterogeneous (some clients may have mostly malware or mostly benign)
+- `0.5`: Moderate heterogeneity (default)
+- `1.0`: Mild heterogeneity
+- `10.0`: Nearly IID
+
+### Differential Privacy (Opacus)
+
+Train with formal differential privacy guarantees using Opacus:
+
+```bash
+# Install opacus
+pip install opacus>=1.4.0
+
+# Use dp-mlp model (DP only works with PyTorch MLP, not logreg)
+python client.py --cid 0 --model dp-mlp --dp-epsilon 1.0 --dp-delta 1e-5
+```
+
+Parameters:
+- `--dp-epsilon`: Privacy budget (lower = more private, default: 1.0)
+- `--dp-delta`: Probability of privacy breach (default: 1e-5)
+- `--dp-noise-multiplier`: Noise scale (default: 1.0)
+- `--dp-max-grad-norm`: Gradient clipping norm (default: 1.0)
+
+### Secure Communication (mTLS)
+
+Enable mutual TLS authentication between server and clients:
+
+```bash
+# 1. Generate certificates
+chmod +x certs/generate_certs.sh
+./certs/generate_certs.sh 2  # Generate for 2 clients
+
+# 2. Start server with SSL
+python server.py --rounds 3 --address 0.0.0.0:8080 \
+  --ssl-certfile certs/server.crt \
+  --ssl-keyfile certs/server.key \
+  --ssl-ca-certfile certs/ca.crt
+
+# 3. Start clients with SSL
+python client.py --cid 0 --ssl-ca-certfile certs/ca.crt
+```
+
+### Experiment Comparison
+
+Run experiments comparing aggregation methods:
+```bash
+python run_experiments.py  # Compares FedAvg, Median, Krum
+python dashboard_comparison.py --port 8502  # View results at localhost:8502
+```

@@ -11,7 +11,13 @@ from typing import Dict, List
 import flwr as fl
 import numpy as np
 
-from federated_malware.dataset_utils import DatasetPartition, create_partitions, load_malmem
+from federated_malware.dataset_utils import (
+    DatasetPartition,
+    create_partitions,
+    create_noniid_partitions,
+    get_partition_stats,
+    load_malmem,
+)
 from federated_malware.model_utils import NumpyLogisticModel, TorchMLPModel, TrainConfig
 
 
@@ -43,6 +49,24 @@ def parse_args() -> argparse.Namespace:
         choices=["logreg", "mlp"],
         help="Model type: 'logreg' (NumPy logistic) or 'mlp' (PyTorch MLP)",
     )
+    # Non-IID data distribution options
+    parser.add_argument(
+        "--partition-method",
+        type=str,
+        default="iid",
+        choices=["iid", "noniid"],
+        help="Data partition method: 'iid' (balanced) or 'noniid' (Dirichlet-based)",
+    )
+    parser.add_argument(
+        "--noniid-alpha",
+        type=float,
+        default=0.5,
+        help="Dirichlet alpha for Non-IID partitioning (lower=more heterogeneous)",
+    )
+    # SSL/TLS options for secure communication
+    parser.add_argument("--ssl-certfile", type=str, default=None, help="Path to client SSL certificate")
+    parser.add_argument("--ssl-keyfile", type=str, default=None, help="Path to client SSL private key")
+    parser.add_argument("--ssl-ca-certfile", type=str, default=None, help="Path to CA certificate")
     return parser.parse_args()
 
 
@@ -104,7 +128,19 @@ def main() -> None:
     cid = int(cid_env) if cid_env is not None else args.cid
 
     x, y, _ = load_malmem(args.data_path)
-    partitions, _ = create_partitions(x, y, num_clients=args.num_clients)
+    
+    # Choose partition method
+    if args.partition_method == "noniid":
+        partitions, _ = create_noniid_partitions(
+            x, y, num_clients=args.num_clients, alpha=args.noniid_alpha
+        )
+        # Print partition statistics for Non-IID analysis
+        stats = get_partition_stats(partitions)
+        print(f"[Client {cid}] Non-IID partition stats (alpha={args.noniid_alpha}):")
+        for c, s in stats.items():
+            print(f"  Client {c}: {s['total']} samples, malware_ratio={s['malware_ratio']:.2%}")
+    else:
+        partitions, _ = create_partitions(x, y, num_clients=args.num_clients)
 
     train_cfg = TrainConfig(
         lr=args.lr,
@@ -115,10 +151,17 @@ def main() -> None:
     )
     client = MalwareClient(cid, partitions, train_cfg, model_name=args.model)
 
+    # SSL/TLS configuration for secure communication
+    root_certificates = None
+    if args.ssl_ca_certfile:
+        with open(args.ssl_ca_certfile, "rb") as f:
+            root_certificates = f.read()
+    
     # start_client is the preferred API; NumPyClient exposes .to_client()
     fl.client.start_client(
         server_address=args.server_address,
         client=client.to_client(),
+        root_certificates=root_certificates,
     )
 
 

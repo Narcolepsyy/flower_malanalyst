@@ -72,6 +72,10 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Z-score threshold for FLANDERS-like norm filter; disable if None",
     )
+    # SSL/TLS options for secure communication (mTLS)
+    parser.add_argument("--ssl-certfile", type=str, default=None, help="Path to server SSL certificate")
+    parser.add_argument("--ssl-keyfile", type=str, default=None, help="Path to server SSL private key")
+    parser.add_argument("--ssl-ca-certfile", type=str, default=None, help="Path to CA certificate for client verification")
     return parser.parse_args()
 
 
@@ -99,10 +103,25 @@ def main() -> None:
             **base_kwargs,
         )
 
+    # Load SSL certificates if provided
+    certificates = None
+    if args.ssl_certfile and args.ssl_keyfile:
+        with open(args.ssl_certfile, "rb") as f:
+            server_cert = f.read()
+        with open(args.ssl_keyfile, "rb") as f:
+            server_key = f.read()
+        ca_cert = None
+        if args.ssl_ca_certfile:
+            with open(args.ssl_ca_certfile, "rb") as f:
+                ca_cert = f.read()
+        certificates = (server_cert, server_key, ca_cert) if ca_cert else (server_cert, server_key)
+        print(f"[Server] mTLS enabled with certificate: {args.ssl_certfile}")
+
     fl.server.start_server(
         server_address=args.address,
         config=fl.server.ServerConfig(num_rounds=args.rounds),
         strategy=strategy,
+        certificates=certificates,
     )
 
 
