@@ -1,57 +1,57 @@
 {
-  "round": 3,
-  "model_type": "mlp",
-  "model_weights": "state/latest_model.npz",
+  "round": 5,
+  "model_type": "logreg",
+  "model_weights": "state/model_trimmed.npz",
   "method": "auto",
-  "background_size": 256,
+  "background_size": null,
   "top_features": [
     {
-      "feature": "svcscan.process_services",
-      "score": 3.0145627079036785e-06
-    },
-    {
-      "feature": "handles.nmutant",
-      "score": 2.268198159072199e-06
-    },
-    {
-      "feature": "svcscan.nservices",
-      "score": 2.1822063445142703e-06
-    },
-    {
       "feature": "pslist.avg_threads",
-      "score": 2.154102048734785e-06
+      "score": 1.3814448519593536
     },
     {
-      "feature": "pslist.nppid",
-      "score": 1.992646048165625e-06
+      "feature": "modules.nmodules",
+      "score": 1.1906254167839152
+    },
+    {
+      "feature": "svcscan.process_services",
+      "score": 1.1890841241902579
     },
     {
       "feature": "svcscan.shared_process_services",
-      "score": 1.979806938834372e-06
+      "score": 1.027866141388603
+    },
+    {
+      "feature": "handles.nmutant",
+      "score": 0.9685914568814123
+    },
+    {
+      "feature": "svcscan.nservices",
+      "score": 0.9614559202698847
     },
     {
       "feature": "dlllist.avg_dlls_per_proc",
-      "score": 1.5679472653573612e-06
+      "score": 0.8793845343792248
+    },
+    {
+      "feature": "pslist.nppid",
+      "score": 0.625536005459334
     },
     {
       "feature": "handles.nevent",
-      "score": 1.552392518533452e-06
+      "score": 0.6008963558078428
     },
     {
       "feature": "handles.nthread",
-      "score": 1.522648858554021e-06
+      "score": 0.5873945322200219
     },
     {
-      "feature": "svcscan.kernel_drivers",
-      "score": 1.3623516679217573e-06
+      "feature": "ldrmodules.not_in_load",
+      "score": 0.5491874903246046
     },
     {
       "feature": "ldrmodules.not_in_mem",
-      "score": 1.2654126066991012e-06
-    },
-    {
-      "feature": "malfind.protection",
-      "score": 1.2015284482913557e-06
+      "score": 0.5489766697092936
     }
   ]
 }

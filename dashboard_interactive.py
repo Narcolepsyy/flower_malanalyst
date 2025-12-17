@@ -17,7 +17,21 @@ app = Flask(__name__)
 
 # State
 RESULTS_PATH = Path("state/experiment_results.json")
+EXPLANATION_PATH = Path("state/explanations.json")
 EXPERIMENT_STATUS = {"running": False, "current": None, "log": []}
+
+
+def load_explanations() -> Dict[str, Any]:
+    default = {"round": None, "model_type": None, "top_features": []}
+    if not EXPLANATION_PATH.exists():
+        return default
+    try:
+        data = json.loads(EXPLANATION_PATH.read_text())
+        for k, v in default.items():
+            data.setdefault(k, v)
+        return data
+    except json.JSONDecodeError:
+        return default
 
 
 def load_results() -> List[Dict[str, Any]]:
@@ -62,6 +76,26 @@ def run_experiment_thread(config: Dict):
         else:
             EXPERIMENT_STATUS["log"].append("Experiment completed successfully!")
             
+            # Auto-generate explanations after successful experiment
+            EXPERIMENT_STATUS["log"].append("Generating feature explanations...")
+            try:
+                explain_cmd = [
+                    sys.executable, "explain.py",
+                    "--model-weights", f"state/model_{config['agg_method']}.npz",
+                    "--model", config["model"] if config["model"] != "dp-mlp" else "mlp",
+                    "--top-k", "12",
+                    "--output", "state/explanations.json",
+                ]
+                explain_result = subprocess.run(
+                    explain_cmd, capture_output=True, text=True, timeout=60
+                )
+                if explain_result.returncode == 0:
+                    EXPERIMENT_STATUS["log"].append("Explanations generated successfully!")
+                else:
+                    EXPERIMENT_STATUS["log"].append(f"Explain error: {explain_result.stderr}")
+            except Exception as ex:
+                EXPERIMENT_STATUS["log"].append(f"Explain exception: {str(ex)}")
+            
     except Exception as e:
         EXPERIMENT_STATUS["log"].append(f"Exception: {str(e)}")
     finally:
@@ -76,6 +110,46 @@ def api_results() -> Response:
 @app.route("/api/status")
 def api_status() -> Response:
     return jsonify(EXPERIMENT_STATUS)
+
+
+@app.route("/api/explanations")
+def api_explanations() -> Response:
+    return jsonify(load_explanations())
+
+
+@app.route("/api/generate_explanations", methods=["POST"])
+def api_generate_explanations() -> Response:
+    """Manually trigger explanation generation."""
+    if EXPERIMENT_STATUS["running"]:
+        return jsonify({"error": "Experiment running, please wait"}), 400
+    
+    try:
+        # Find ALL model files and pick the most recently modified
+        model_files = list(Path("state").glob("model_*.npz"))
+        latest_model = Path("state/latest_model.npz")
+        if latest_model.exists():
+            model_files.append(latest_model)
+        
+        if not model_files:
+            return jsonify({"error": "No model weights found"}), 404
+        
+        # Use the most recently modified model
+        model_path = max(model_files, key=lambda p: p.stat().st_mtime)
+        
+        cmd = [
+            sys.executable, "explain.py",
+            "--model-weights", str(model_path),
+            "--top-k", "12",
+            "--output", "state/explanations.json",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            return jsonify({"status": "success", "message": f"Explanations generated from {model_path.name}"})
+        else:
+            return jsonify({"error": result.stderr}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/run", methods=["POST"])
@@ -240,6 +314,71 @@ def index() -> Response:
     
     .noniid-group { display: none; }
     .noniid-group.visible { display: block; }
+    
+    /* Explainability Panel */
+    .explain-section {
+      margin-top: 20px;
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .explain-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .explain-title {
+      font-size: 18px;
+      font-weight: 600;
+      background: linear-gradient(90deg, #f472b6, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .explain-meta { color: #94a3b8; font-size: 13px; }
+    .explain-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 900px) {
+      .explain-content { grid-template-columns: 1fr; }
+    }
+    .explain-chart-card { background: #0f172a; border-radius: 8px; padding: 12px; }
+    .explain-table-card { background: #0f172a; border-radius: 8px; padding: 12px; overflow-x: auto; }
+    .explain-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .explain-table th {
+      background: linear-gradient(90deg, #f472b6, #c084fc);
+      color: white;
+      padding: 8px;
+      text-align: left;
+    }
+    .explain-table td {
+      padding: 8px;
+      border-bottom: 1px solid #334155;
+    }
+    .explain-table tr:hover td { background: #334155; }
+    .btn-small {
+      padding: 8px 14px;
+      background: linear-gradient(90deg, #f472b6, #c084fc);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 12px;
+      transition: transform 0.1s;
+    }
+    .btn-small:hover { transform: translateY(-1px); }
+    .btn-small:disabled { opacity: 0.5; cursor: not-allowed; }
+    .explain-empty { color: #94a3b8; text-align: center; padding: 20px; }
   </style>
 </head>
 <body>
@@ -331,6 +470,40 @@ def index() -> Response:
           <div class="chart-card">
             <div class="chart-title">Final Comparison</div>
             <div id="bar-chart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Explainability Section -->
+    <div class="explain-section">
+      <div class="explain-header">
+        <div>
+          <div class="explain-title">Feature Explainability (XAI)</div>
+          <div class="explain-meta" id="explain-meta">Awaiting explanations...</div>
+        </div>
+        <button class="btn-small" id="gen-explain-btn" onclick="generateExplanations()">
+          Generate Explanations
+        </button>
+      </div>
+      <div class="explain-content" id="explain-content">
+        <div class="explain-chart-card">
+          <div id="explain-chart"></div>
+        </div>
+        <div class="explain-table-card">
+          <table class="explain-table" id="explain-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Feature</th>
+                <th>Importance</th>
+                <th>Relative</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="explain-empty" id="explain-empty">
+            No explanations yet. Run an experiment or click "Generate Explanations".
           </div>
         </div>
       </div>
@@ -491,6 +664,118 @@ def index() -> Response:
     }
     
     loadData();
+    
+    // Explainability functions
+    let lastExplainData = null;
+    
+    async function loadExplanations() {
+      try {
+        const res = await fetch('/api/explanations');
+        const data = await res.json();
+        const features = data.top_features || [];
+        const explainTable = document.getElementById('explain-table');
+        const explainEmpty = document.getElementById('explain-empty');
+        const explainMeta = document.getElementById('explain-meta');
+        
+        if (features.length === 0) {
+          explainTable.style.display = 'none';
+          explainEmpty.style.display = 'block';
+          explainMeta.textContent = 'Awaiting explanations...';
+          if (lastExplainData !== null) {
+            Plotly.purge('explain-chart');
+            lastExplainData = null;
+          }
+          return;
+        }
+        
+        // Check if data has changed to avoid unnecessary re-renders
+        const dataHash = JSON.stringify(features);
+        if (dataHash === lastExplainData) {
+          return; // Data unchanged, skip re-render
+        }
+        lastExplainData = dataHash;
+        
+        // Update metadata
+        const round = data.round === null ? 'latest' : data.round;
+        const method = data.method || 'auto';
+        explainMeta.textContent = `Model: ${data.model_type || 'unknown'} | Round: ${round} | Method: ${method}`;
+        
+        // Build table
+        const tbody = explainTable.querySelector('tbody');
+        tbody.innerHTML = '';
+        const maxScore = features.reduce((m, f) => Math.max(m, Math.abs(f.score || 0)), 0);
+        features.forEach((f, idx) => {
+          const tr = document.createElement('tr');
+          const sci = Number(f.score || 0).toExponential(2);
+          const rel = maxScore > 0 ? ((Math.abs(f.score) / maxScore) * 100).toFixed(1) : '0.0';
+          tr.innerHTML = `<td>${idx + 1}</td><td>${f.feature}</td><td>${sci}</td><td>${rel}%</td>`;
+          tbody.appendChild(tr);
+        });
+        explainTable.style.display = 'table';
+        explainEmpty.style.display = 'none';
+        
+        // Draw horizontal bar chart - use normalized scores for visibility
+        const names = features.map(f => f.feature).reverse();
+        const relativeScores = features.map(f => maxScore > 0 ? (Math.abs(f.score) / maxScore) * 100 : 0).reverse();
+        const trace = {
+          x: relativeScores,
+          y: names,
+          type: 'bar',
+          orientation: 'h',
+          marker: { 
+            color: relativeScores.map((_, i) => `hsl(${300 + (i * 10) % 60}, 70%, 60%)`)
+          },
+          text: features.map(f => Number(f.score).toExponential(2)).reverse(),
+          hovertemplate: '%{y}: %{text}<extra></extra>'
+        };
+        const layout = {
+          ...baseLayout,
+          height: 400,
+          title: { text: 'Relative Feature Importances', font: { size: 13, color: '#e2e8f0' } },
+          margin: { l: 180, r: 20, t: 40, b: 40 },
+          xaxis: { ...baseLayout.xaxis, title: 'Relative Importance (%)', range: [0, 105] },
+          yaxis: { ...baseLayout.yaxis, automargin: true }
+        };
+        
+        // Use react for smoother updates if chart exists
+        const chartEl = document.getElementById('explain-chart');
+        if (chartEl && chartEl.data) {
+          Plotly.react('explain-chart', [trace], layout, {displayModeBar: false});
+        } else {
+          Plotly.newPlot('explain-chart', [trace], layout, {displayModeBar: false});
+        }
+        
+      } catch (e) {
+        console.error('Error loading explanations:', e);
+      }
+    }
+    
+    async function generateExplanations() {
+      const btn = document.getElementById('gen-explain-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      
+      try {
+        const res = await fetch('/api/generate_explanations', { method: 'POST' });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          alert('Error: ' + (data.error || 'Failed to generate explanations'));
+        } else {
+          // Reset cache to force re-render
+          lastExplainData = null;
+          loadExplanations();
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Explanations';
+      }
+    }
+    
+    loadExplanations();
+    setInterval(loadExplanations, 5000);
   </script>
 </body>
 </html>
