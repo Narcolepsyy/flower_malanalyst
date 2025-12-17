@@ -7,3 +7,6 @@ flask==3.0.3
 torch==2.3.1
 matplotlib==3.8.0
 opacus>=1.4.0
+xgboost==3.1.2
+lightgbm==4.6.0
+catboost==1.2.8
