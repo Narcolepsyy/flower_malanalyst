@@ -49,23 +49,37 @@ def _load_parameters(npz_path: Path) -> Tuple[List[np.ndarray], int | None]:
 def _infer_model_type(params: List[np.ndarray], override: str | None) -> str:
     if override:
         return override
+    # CatBoost models are serialized as single byte arrays
+    if len(params) == 1 and params[0].dtype == np.uint8:
+        return "catboost"
     if len(params) == 2 and params[1].shape[-1] == 1:
         return "logreg"
     if len(params) == 6 and params[-1].shape[-1] == 1:
         return "mlp"
+    # Hybrid quantum has 8 parameters (6 classical + 2 quantum layer params)
+    if len(params) == 8:
+        return "hybrid-quantum"
     raise ValueError("Unable to infer model type from parameter shapes; pass --model explicitly")
 
 
 def _build_model(params: List[np.ndarray], model_type: str, n_features: int):
     if model_type == "logreg":
         model = NumpyLogisticModel(n_features=n_features)
+        model.set_parameters(params)
+        return model
+    elif model_type == "catboost":
+        import pickle
+        if len(params[0]) == 0:
+            raise ValueError("CatBoost model not yet trained (empty parameters)")
+        model = pickle.loads(params[0].tobytes())
+        return model
     else:
         # torch layer shapes: [out_features, in_features]
         hidden1 = params[0].shape[0]
         hidden2 = params[2].shape[0]
         model = TorchMLPModel(n_features=n_features, hidden1=hidden1, hidden2=hidden2)
-    model.set_parameters(params)
-    return model
+        model.set_parameters(params)
+        return model
 
 
 def _logreg_importance(model: NumpyLogisticModel) -> np.ndarray:
@@ -85,6 +99,23 @@ def _mlp_weight_importance(model: TorchMLPModel) -> np.ndarray:
     """Proxy importance from first-layer weights (robust even if gradients vanish)."""
     first_layer = next(model.model.parameters())  # weight matrix of shape [hidden1, n_features]
     return first_layer.detach().abs().mean(dim=0).cpu().numpy()
+
+
+def _catboost_importance(model, feature_names: List[str]) -> np.ndarray:
+    """Get CatBoost built-in feature importance."""
+    try:
+        importance = model.get_feature_importance()
+        return np.array(importance)
+    except Exception:
+        # Fallback: return uniform importance
+        return np.ones(len(feature_names))
+
+
+def _hybrid_quantum_importance(params: List[np.ndarray]) -> np.ndarray:
+    """Get hybrid quantum model importance from first classical layer weights."""
+    # First layer weights shape: [64, n_features]
+    first_layer = params[0]
+    return np.abs(first_layer).mean(axis=0)
 
 
 def _format_top_features(scores: np.ndarray, feature_names: List[str], k: int) -> List[dict]:
@@ -114,7 +145,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model",
         type=str,
-        choices=["logreg", "mlp"],
+        choices=["logreg", "mlp", "catboost", "hybrid-quantum"],
         default=None,
         help="Force model type if auto-detection from weights fails",
     )
@@ -153,6 +184,10 @@ def main() -> None:
 
     if model_type == "logreg":
         scores = _logreg_importance(model)
+    elif model_type == "catboost":
+        scores = _catboost_importance(model, feature_names)
+    elif model_type == "hybrid-quantum":
+        scores = _hybrid_quantum_importance(params)
     else:
         if len(x) == 0:
             raise ValueError("Dataset is empty; cannot compute gradient-based importances")

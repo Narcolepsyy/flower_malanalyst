@@ -16,8 +16,8 @@ from federated_malware.dataset_utils import (
     create_noniid_partitions,
     load_malmem,
 )
-from federated_malware.model_utils import NumpyLogisticModel, TorchMLPModel, TrainConfig
-from federated_malware.strategy import LoggedFedAvg, RobustLoggedFedAvg
+from federated_malware.model_utils import NumpyLogisticModel, TorchMLPModel, CatBoostModel, HybridQuantumModel, TrainConfig
+from federated_malware.strategy import LoggedFedAvg, RobustLoggedFedAvg, CatBoostLoggedFedAvg
 
 
 def _weighted_metrics(metrics):
@@ -90,13 +90,21 @@ def run_single_experiment(
     # Initialize model
     if model_name == "logreg":
         init_model = NumpyLogisticModel(n_features=n_features)
+    elif model_name == "catboost":
+        init_model = CatBoostModel(n_features=n_features)
+    elif model_name == "hybrid-quantum":
+        init_model = HybridQuantumModel(n_features=n_features)
     else:
         init_model = TorchMLPModel(n_features=n_features, hidden1=128, hidden2=64)
     
     init_params = ndarrays_to_parameters(init_model.get_parameters())
     base_kwargs["initial_parameters"] = init_params
     
-    if agg_method == "fedavg":
+    # Choose strategy based on model type
+    if model_name == "catboost":
+        # CatBoost needs special strategy (no parameter averaging)
+        strategy = CatBoostLoggedFedAvg(**base_kwargs)
+    elif agg_method == "fedavg":
         strategy = LoggedFedAvg(**base_kwargs)
     else:
         strategy = RobustLoggedFedAvg(
@@ -137,7 +145,7 @@ def main():
     parser.add_argument("--agg-method", default="fedavg", choices=["fedavg", "median", "krum", "trimmed"])
     parser.add_argument("--num-rounds", type=int, default=5)
     parser.add_argument("--num-clients", type=int, default=2)
-    parser.add_argument("--model", default="logreg", choices=["logreg", "mlp"])
+    parser.add_argument("--model", default="logreg", choices=["logreg", "mlp", "catboost", "hybrid-quantum"])
     parser.add_argument("--partition-method", default="iid", choices=["iid", "noniid"])
     parser.add_argument("--noniid-alpha", type=float, default=0.5)
     args = parser.parse_args()

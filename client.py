@@ -18,7 +18,7 @@ from federated_malware.dataset_utils import (
     get_partition_stats,
     load_malmem,
 )
-from federated_malware.model_utils import NumpyLogisticModel, TorchMLPModel, TrainConfig
+from federated_malware.model_utils import NumpyLogisticModel, TorchMLPModel, CatBoostModel, HybridQuantumModel, TrainConfig
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,8 +46,8 @@ def parse_args() -> argparse.Namespace:
         "--model",
         type=str,
         default="logreg",
-        choices=["logreg", "mlp"],
-        help="Model type: 'logreg' (NumPy logistic) or 'mlp' (PyTorch MLP)",
+        choices=["logreg", "mlp", "catboost", "hybrid-quantum"],
+        help="Model type: 'logreg', 'mlp', 'catboost', or 'hybrid-quantum'",
     )
     # Non-IID data distribution options
     parser.add_argument(
@@ -97,6 +97,10 @@ class MalwareClient(fl.client.NumPyClient):
                 hidden1=train_cfg.hidden1,
                 hidden2=train_cfg.hidden2,
             )
+        elif model_name == "catboost":
+            self.model = CatBoostModel(n_features=n_features)
+        elif model_name == "hybrid-quantum":
+            self.model = HybridQuantumModel(n_features=n_features, lr=train_cfg.lr)
         else:
             raise ValueError(f"Unknown model '{model_name}'")
         self.train_cfg = train_cfg

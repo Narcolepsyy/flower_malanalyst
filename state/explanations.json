@@ -1,57 +1,57 @@
 {
   "round": 5,
   "model_type": "logreg",
-  "model_weights": "state/model_trimmed.npz",
+  "model_weights": "state/model_fedavg.npz",
   "method": "auto",
   "background_size": null,
   "top_features": [
     {
       "feature": "pslist.avg_threads",
-      "score": 1.3814448519593536
+      "score": 1.3775103565520237
     },
     {
       "feature": "modules.nmodules",
-      "score": 1.1906254167839152
+      "score": 1.1890526644929524
     },
     {
       "feature": "svcscan.process_services",
-      "score": 1.1890841241902579
+      "score": 1.1884191955341241
     },
     {
       "feature": "svcscan.shared_process_services",
-      "score": 1.027866141388603
+      "score": 1.0358636425552004
     },
     {
       "feature": "handles.nmutant",
-      "score": 0.9685914568814123
+      "score": 0.9670952995119384
     },
     {
       "feature": "svcscan.nservices",
-      "score": 0.9614559202698847
+      "score": 0.9665645575991224
     },
     {
       "feature": "dlllist.avg_dlls_per_proc",
-      "score": 0.8793845343792248
+      "score": 0.8784429536568377
     },
     {
       "feature": "pslist.nppid",
-      "score": 0.625536005459334
+      "score": 0.6205696768092412
     },
     {
       "feature": "handles.nevent",
-      "score": 0.6008963558078428
+      "score": 0.6027734282836228
     },
     {
       "feature": "handles.nthread",
-      "score": 0.5873945322200219
+      "score": 0.5865640983816578
     },
     {
       "feature": "ldrmodules.not_in_load",
-      "score": 0.5491874903246046
+      "score": 0.5552175682230416
     },
     {
       "feature": "ldrmodules.not_in_mem",
-      "score": 0.5489766697092936
+      "score": 0.5549907697215334
     }
   ]
 }
