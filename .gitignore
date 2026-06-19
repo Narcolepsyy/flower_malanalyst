@@ -3,3 +3,16 @@ __pycache__/
 *.pyc
 *.joblib
 ray_results/
+state/partitions/
+Obfuscated-MalMem2022.csv
+
+# LaTeX auxiliary files
+IE105_Q11/*.aux
+IE105_Q11/*.bbl
+IE105_Q11/*.blg
+IE105_Q11/*.fdb_latexmk
+IE105_Q11/*.fls
+IE105_Q11/*.log
+IE105_Q11/*.out
+IE105_Q11/*.pdf
+IE105_Q11/*.toc

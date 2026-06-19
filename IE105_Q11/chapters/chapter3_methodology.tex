@@ -23,7 +23,7 @@ Hệ thống được thiết kế theo mô hình Client-Server phi tập trung,
     \item \textbf{Monitoring \& Explainability Dashboard:}
     Hệ thống giám sát thời gian thực được xây dựng bằng \textbf{Flask}, hoạt động độc lập với luồng huấn luyện:
     \begin{itemize}
-        \item \textbf{Real-time Monitoring:} Dashboard liên tục truy vấn tệp \texttt{state/metrics.json} (polling) để vẽ biểu đồ diễn biến của Loss và Accuracy.
+        \item \textbf{Real-time Monitoring:} Dashboard liên tục truy vấn tệp \path{state/metrics.json} (polling) để vẽ biểu đồ diễn biến của Loss và Accuracy.
         \item \textbf{Explainable AI (XAI):} Tích hợp module giải thích mô hình (\texttt{explain.py}). Dashboard hiển thị mức độ quan trọng của các đặc trưng (Feature Importance) dựa trên trọng số mô hình toàn cục, giúp các chuyên gia an ninh mạng hiểu được tại sao một mẫu lại bị phân loại là mã độc.
     \end{itemize}
 \end{enumerate}
@@ -123,7 +123,10 @@ Mô hình được thiết kế theo kiến trúc "bánh kẹp" (sandwich), kế
 \begin{enumerate}
     \item \textbf{Khối Mã hóa Cổ điển (Classical Encoder):}
     Do số lượng qubit hiện tại còn hạn chế, chúng tôi sử dụng một mạng nơ-ron nhỏ để giảm chiều dữ liệu từ 55 đặc trưng đầu vào xuống còn 4 đặc trưng (tương ứng với 4 qubit) và chuyển về khoảng giá trị thích hợp cho các góc quay lượng tử qua hàm kích hoạt \textit{Tanh} và phép nhân tỉ lệ với $\pi$.
-    $$ \text{Input (55)} \xrightarrow{\text{Linear}} \text{Hidden (64)} \xrightarrow{\text{ReLU}} \text{Hidden (16)} \xrightarrow{\text{ReLU}} \text{Latent (4)} \xrightarrow{\text{Tanh}} \text{Latent' (4)} \xrightarrow{\times \pi} \text{Rotation Angles} $$
+    \begin{align*}
+    \text{Input (55)} &\xrightarrow{\text{Linear}} \text{Hidden (64)} \xrightarrow{\text{ReLU}} \text{Hidden (16)} \\
+    &\xrightarrow{\text{ReLU}} \text{Latent (4)} \xrightarrow{\text{Tanh}} \text{Latent' (4)} \xrightarrow{\times \pi} \text{Rotation Angles}
+    \end{align*}
     
     \item \textbf{Lớp Lượng tử (Quantum Layer - VQC):}
     Sử dụng thư viện \textit{PennyLane} để mô phỏng mạch lượng tử 4-qubit.
@@ -232,7 +235,7 @@ Hệ thống thiết lập cơ chế bảo vệ riêng tư thông qua các tham 
     \item \textbf{Kế toán và Đo lường Riêng tư ($\epsilon, \delta$):} Ngân sách riêng tư $\epsilon$ đạt được thực tế không được dùng làm ràng buộc đầu vào trực tiếp để sinh nhiễu, mà được tính toán và báo cáo lại một cách hậu nghiệm (post-facto) thông qua cơ chế Privacy Accountant của Opacus sau khi kết thúc huấn luyện với một mức xác suất rò rỉ thông tin mục tiêu $\delta$ (được đặt mặc định là $1e-5$).
 \end{itemize}
 
-Việc tích hợp Opacus biến trình tối ưu hóa thông thường (Adam/SGD) thành \texttt{DPOptimizer}, đảm bảo các đảm bảo toán học về sự riêng tư được thực thi nghiêm ngặt trong mỗi bước huấn luyện cục bộ.
+Việc tích hợp Opacus biến trình tối ưu hóa thông thường (Adam/SGD) thành \path{DPOptimizer}, đảm bảo các đảm bảo toán học về sự riêng tư được thực thi nghiêm ngặt trong mỗi bước huấn luyện cục bộ.
 
 \subsection{Các Cơ chế Nâng cao Thực thể trong Hệ thống}
 

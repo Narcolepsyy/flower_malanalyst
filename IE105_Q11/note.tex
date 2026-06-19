@@ -1,0 +1,62 @@
+% ==================================================================
+% TRANG 1: DANH SÁCH THÀNH VIÊN & PHÂN CÔNG (Ảnh thẻ DỌC)
+% ==================================================================
+\newpage
+\thispagestyle{fancy} 
+\section*{DANH SÁCH THÀNH VIÊN NHÓM}
+\addcontentsline{toc}{section}{Danh sách thành viên nhóm}
+
+\vspace{1cm}
+
+% --- KHUNG ẢNH THÀNH VIÊN DỌC (Sử dụng Minipage để chia cột) ---
+\begin{figure}[h]
+    \centering
+    % --- THÀNH VIÊN 1 ---
+    % Giảm độ rộng minipage xuống một chút để ảnh dọc đứng gần nhau hơn
+    \begin{minipage}{0.25\textwidth} 
+        \centering
+        % Vẽ khung ảnh DỌC (Ví dụ: Rộng 3cm, Cao 4cm - Tỉ lệ 3:4)
+        \begin{tikzpicture}
+            \draw[thick] (0,0) rectangle (3,4); % Kích thước 3x4
+            \node at (1.5,2) {Ảnh thẻ (Dọc)};  % Chữ giữ chỗ nằm giữa
+        \end{tikzpicture}
+        \vspace{0.3cm}
+        
+        \textbf{Nguyễn Văn A}\\
+        MSSV: 2152xxxx\\
+        (Nhóm trưởng)
+    \end{minipage}
+    \hfill % Khoảng trống tự động
+    % --- THÀNH VIÊN 2 ---
+    \begin{minipage}{0.25\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \draw[thick] (0,0) rectangle (3,4);
+            \node at (1.5,2) {Ảnh thẻ (Dọc)};
+            \
+        \end{tikzpicture}
+        \vspace{0.3cm}
+        
+        \textbf{Trần Văn B}\\
+        MSSV: 2152xxxx\\
+        (Thành viên)
+    \end{minipage}
+    \hfill
+    % --- THÀNH VIÊN 3 ---
+    \begin{minipage}{0.25\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \draw[thick] (0,0) rectangle (3,4);
+            \node at (1.5,2) {Ảnh thẻ (Dọc)};
+        \end{tikzpicture}
+        \vspace{0.3cm}
+        
+        \textbf{Lê Văn C}\\
+        MSSV: 2152xxxx\\
+        (Thành viên)
+    \end{minipage}
+\end{figure}
+
+\vspace{1cm} % Giảm khoảng cách này lại một chút vì ảnh dọc chiếm nhiều chiều cao hơn
+
+
