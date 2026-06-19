@@ -1,6 +1,6 @@
 #!/bin/bash
-# Generate self-signed certificates for mTLS between Flower server and clients
-# For production, use a proper CA (e.g., Let's Encrypt, internal PKI)
+# Generate demo self-signed certificates for mTLS between Flower server and clients.
+# Do not use these certificates in production. Use an internal PKI or managed CA.
 
 set -e
 
@@ -8,7 +8,7 @@ CERT_DIR="$(dirname "$0")"
 cd "$CERT_DIR"
 
 # Configuration
-DAYS=365
+DAYS=${DAYS:-30}
 COUNTRY="VN"
 STATE="HCM"
 LOCALITY="Ho Chi Minh City"
@@ -42,7 +42,6 @@ subjectAltName = @alt_names
 DNS.1 = localhost
 DNS.2 = server
 IP.1 = 127.0.0.1
-IP.2 = 0.0.0.0
 EOF
 
 openssl x509 -req -days $DAYS -in server.csr -CA ca.crt -CAkey ca.key \
@@ -78,6 +77,7 @@ rm -f *.csr *.cnf ca.srl
 
 echo ""
 echo "=== Certificate Generation Complete ==="
+echo "WARNING: These are demo certificates with ${DAYS}-day validity, not production credentials."
 echo ""
 echo "Files generated:"
 echo "  CA:     ca.crt, ca.key"

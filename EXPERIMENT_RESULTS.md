@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document presents the experimental results comparing three aggregation strategies for federated malware detection:
+This document records historical single-run demo results comparing aggregation strategies for federated malware detection. Treat the tables below as illustrative until regenerated with the current leakage-safe preprocessing, central test evaluation, and repeated seeds.
 
 - **FedAvg** (Federated Averaging) - Standard weighted averaging
 - **Median** - Byzantine-resilient median aggregation
@@ -19,6 +19,8 @@ This document presents the experimental results comparing three aggregation stra
 | Local Epochs | 2 |
 | Batch Size | 32 |
 | Learning Rate | 0.05 |
+| Seed | Historical run; not fully recorded |
+| Test Set | Historical client-validation aggregate; current code also logs central held-out metrics |
 
 ## Results Summary
 
@@ -31,7 +33,7 @@ This document presents the experimental results comparing three aggregation stra
 | **Krum** | 99.81% | 99.81% | 99.73% | **99.89%** | 0.0090 |
 
 > [!NOTE]
-> All three methods achieve excellent performance (>99.8% accuracy) on the malware detection task. The differences are marginal in this controlled experiment without adversarial clients.
+> All three methods achieved high performance in this benign two-client demo. Differences such as 0.02% are within expected run-to-run noise and should not be interpreted as a benchmark ranking without repeated seeds and confidence intervals.
 
 ## Performance Over Training Rounds
 
@@ -64,8 +66,8 @@ This document presents the experimental results comparing three aggregation stra
 ### 1. All Methods Converge Rapidly
 All three aggregation strategies converge to >99.7% accuracy within just 2-3 rounds, demonstrating the effectiveness of federated learning for malware detection.
 
-### 2. Median Shows Slight Edge
-The **Median** aggregation achieved the highest final accuracy (99.83%) and F1 score, making it a good default choice when Byzantine resilience is desired.
+### 2. Robust Methods Need Adversarial Evaluation
+Median achieved the highest value in this historical run, but the difference is too small to claim superiority. Current code includes Median, Trimmed Mean, Krum, Bulyan, and Median-of-Means; robust claims should be based on explicit Byzantine simulations.
 
 ### 3. Krum Has Highest Recall
 **Krum** achieved the highest recall (99.89%), meaning it missed fewer malware samples. This is critical in security applications where false negatives are costly.
@@ -73,7 +75,7 @@ The **Median** aggregation achieved the highest final accuracy (99.83%) and F1 s
 ### 4. Loss Comparison
 FedAvg and Krum achieve the lowest final loss (0.0090), while Median is slightly higher (0.0092). This suggests that robust aggregation may trade off some optimization precision for resilience.
 
-## Recommendations
+## Provisional Recommendations
 
 | Scenario | Recommended Method |
 |----------|-------------------|
@@ -81,6 +83,14 @@ FedAvg and Krum achieve the lowest final loss (0.0090), while Median is slightly
 | Potential Byzantine clients | **Median** (good balance) |
 | High security, minimize false negatives | **Krum** (highest recall) |
 | Unknown threat model | **Median** or **Krum** |
+
+Regenerate publishable numbers with:
+
+```bash
+python run_experiments.py --preset overnight --methods fedavg median trimmed krum bulyan mom --seed 42
+```
+
+For paper-style claims, run at least 5 seeds and report mean ± standard deviation with central held-out metrics from `state/metrics_*.json`.
 
 ---
 
@@ -116,7 +126,7 @@ FedAvg and Krum achieve the lowest final loss (0.0090), while Median is slightly
 ## Centralized vs Federated Quantum Training
 
 > [!IMPORTANT]
-> **Key Finding**: Federated Learning significantly outperforms centralized training for hybrid quantum models.
+> **Historical demo note**: The centralized-vs-federated quantum comparison below was not controlled enough to support a broad superiority claim. It should be rerun with identical splits, seeds, and repeated trials.
 
 | Metric | Centralized (Notebook) | Federated Learning |
 |--------|------------------------|-------------------|
@@ -125,7 +135,7 @@ FedAvg and Krum achieve the lowest final loss (0.0090), while Median is slightly
 | **Time** | ~120s | ~110s |
 | **Privacy** | ❌ Data shared | ✅ Data stays local |
 
-### Why FL Performs Better?
+### Possible Explanations To Validate
 
 1. **Ensemble Effect**: Aggregating from 2 clients = learning from diverse data partitions
 2. **Regularization**: FedAvg acts as implicit regularization, reducing overfitting
@@ -142,11 +152,11 @@ FedAvg and Krum achieve the lowest final loss (0.0090), while Median is slightly
 
 ## Conclusion
 
-All three federated aggregation strategies perform exceptionally well for malware detection on the Obfuscated-MalMem2022 dataset. The choice between them should be based on:
+The historical runs suggest this dataset is easy for small tabular models, but robust aggregation and quantum claims require adversarial scenarios and repeated seeds. The choice between aggregation methods should be based on:
 
 1. **Trust model**: If all clients are trusted, FedAvg is sufficient
 2. **Adversarial robustness**: Use Median or Krum when Byzantine clients may exist
 3. **Detection priority**: Use Krum to minimize missed detections
-4. **Model choice**: CatBoost achieves highest accuracy; Hybrid Quantum demonstrates quantum advantage in FL
+4. **Model choice**: CatBoost often performs strongly on tabular data; Hybrid Quantum remains an experimental demonstration
 
 The implemented system with real-time monitoring dashboard provides a solid foundation for production federated malware detection deployments.

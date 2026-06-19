@@ -8,8 +8,9 @@ import json
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from flask import Flask, Response, jsonify, request
 
@@ -19,6 +20,7 @@ app = Flask(__name__)
 RESULTS_PATH = Path("state/experiment_results.json")
 EXPLANATION_PATH = Path("state/explanations.json")
 EXPERIMENT_STATUS = {"running": False, "current": None, "log": []}
+VIEW_MODE = "comparison"
 
 
 def load_explanations() -> Dict[str, Any]:
@@ -117,6 +119,27 @@ def api_explanations() -> Response:
     return jsonify(load_explanations())
 
 
+@app.route("/api/events")
+def api_events() -> Response:
+    def stream():
+        last_payload = ""
+        while True:
+            payload = json.dumps(
+                {
+                    "results": load_results(),
+                    "explanations": load_explanations(),
+                    "status": EXPERIMENT_STATUS,
+                },
+                sort_keys=True,
+            )
+            if payload != last_payload:
+                yield f"data: {payload}\n\n"
+                last_payload = payload
+            time.sleep(2)
+
+    return Response(stream(), mimetype="text/event-stream")
+
+
 @app.route("/api/generate_explanations", methods=["POST"])
 def api_generate_explanations() -> Response:
     """Manually trigger explanation generation."""
@@ -172,7 +195,7 @@ def index() -> Response:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FL Interactive Dashboard</title>
+  <title>FL Interactive Dashboard - __VIEW_MODE__</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" onload="window.plotlyReady=true;"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onload="window.chartjsReady=true;"></script>
   <style>
@@ -385,6 +408,7 @@ def index() -> Response:
 <body>
   <div class="container">
     <h1>Federated Learning Malware Detection</h1>
+    <div style="text-align:center;color:#94a3b8;margin-bottom:18px;">View: __VIEW_MODE__</div>
     
     <div class="grid">
       <div class="config-panel">
@@ -405,6 +429,7 @@ def index() -> Response:
           <select id="model">
             <option value="logreg">Logistic Regression (Fast)</option>
             <option value="mlp">MLP Neural Network</option>
+            <option value="dp-mlp">DP-MLP (Opacus)</option>
             <option value="catboost">CatBoost (Gradient Boosting)</option>
             <option value="hybrid-quantum">Hybrid Quantum (Slow)</option>
           </select>
@@ -473,6 +498,10 @@ def index() -> Response:
           <div class="chart-card">
             <div class="chart-title">Final Comparison</div>
             <div id="bar-chart"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Latest Confusion / ROC / PR</div>
+            <div id="diagnostics-card" style="font-size:13px;color:#cbd5e1;line-height:1.8;">No diagnostics yet.</div>
           </div>
         </div>
       </div>
@@ -662,6 +691,7 @@ def index() -> Response:
         // Draw charts
         const validData = data.filter(d => d.rounds && d.rounds.length > 0);
         if (validData.length === 0) return;
+        renderDiagnostics(validData[validData.length - 1]);
         
         const accTraces = validData.map(d => ({
           x: d.rounds, y: d.accuracy.map(v => v * 100),
@@ -695,6 +725,30 @@ def index() -> Response:
       } catch (e) {
         console.error(e);
       }
+    }
+
+    function latest(arr, fallback = 0) {
+      return arr && arr.length > 0 ? arr[arr.length - 1] : fallback;
+    }
+
+    function renderDiagnostics(result) {
+      const el = document.getElementById('diagnostics-card');
+      if (!el) return;
+
+      const tn = latest(result.tn);
+      const fp = latest(result.fp);
+      const fn = latest(result.fn);
+      const tp = latest(result.tp);
+      const roc = latest(result.roc_auc);
+      const pr = latest(result.pr_auc);
+      const centralAcc = latest(result.central_accuracy, null);
+
+      el.innerHTML = `
+        <div><strong>${result.method.toUpperCase()}</strong>${centralAcc !== null ? ` central accuracy ${(centralAcc * 100).toFixed(2)}%` : ''}</div>
+        <div>TN ${tn} &nbsp; FP ${fp}</div>
+        <div>FN ${fn} &nbsp; TP ${tp}</div>
+        <div>ROC-AUC ${(roc * 100).toFixed(2)}% &nbsp; PR-AUC ${(pr * 100).toFixed(2)}%</div>
+      `;
     }
     
     // loadData() is now called in initAll after Plotly is ready
@@ -858,16 +912,19 @@ def index() -> Response:
 </body>
 </html>
 """
-    return Response(html, mimetype="text/html")
+    return Response(html.replace("__VIEW_MODE__", VIEW_MODE), mimetype="text/html")
 
 
 def main():
+    global VIEW_MODE
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8503)
+    parser.add_argument("--view", choices=["live", "comparison", "explain"], default="comparison")
     args = parser.parse_args()
-    print(f"Interactive Dashboard running at http://localhost:{args.port}")
+    VIEW_MODE = args.view
+    print(f"Interactive Dashboard ({VIEW_MODE}) running at http://localhost:{args.port}")
     app.run(host=args.host, port=args.port, debug=False)
 
 

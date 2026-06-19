@@ -1,22 +1,31 @@
-"""
-Run FL experiments with different aggregation strategies and collect results.
-This script runs server and clients programmatically using Flower's simulation API.
-"""
+"""Run resource-aware FL experiments with Flower's simulation API."""
 
+import argparse
 import json
-import subprocess
-import time
+import logging
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
-import numpy as np
-import pandas as pd
 import flwr as fl
+import pandas as pd
 from flwr.common import ndarrays_to_parameters
 
-from federated_malware.dataset_utils import create_partitions, load_malmem
-from federated_malware.model_utils import NumpyLogisticModel, TorchMLPModel, TrainConfig
-from federated_malware.strategy import LoggedFedAvg, RobustLoggedFedAvg
+from federated_malware.dataset_utils import create_noniid_partitions, create_partitions, load_malmem
+from federated_malware.experiment_utils import (
+    build_experiment_metadata,
+    clone_partitions_with_label_flip,
+    load_experiment_results,
+    resolve_resource_config,
+    weighted_metrics,
+)
+from federated_malware.model_utils import (
+    TrainConfig,
+    build_model,
+    make_central_eval_fn,
+)
+from federated_malware.strategy_factory import create_strategy
+
+LOGGER = logging.getLogger(__name__)
 
 
 def create_client_fn(partitions, train_cfg, model_name="logreg"):
@@ -32,80 +41,126 @@ def create_client_fn(partitions, train_cfg, model_name="logreg"):
     return client_fn
 
 
-def _weighted_metrics(metrics):
-    """Aggregate client metrics weighted by num_examples."""
-    if not metrics:
-        return {}
-    total_examples = sum(num for num, _ in metrics)
-    if total_examples == 0:
-        return {}
-    keys = set().union(*(m.keys() for _, m in metrics))
-    aggregated = {}
-    for k in keys:
-        aggregated[k] = sum(num * m.get(k, 0.0) for num, m in metrics) / total_examples
-    return aggregated
-
-
 def run_experiment(
     agg_method: str,
-    num_rounds: int = 5,
-    num_clients: int = 2,
+    num_rounds: int | None = None,
+    num_clients: int | None = None,
     model_name: str = "logreg",
-    epochs: int = 1,
-    batch_size: int = 64,
+    epochs: int | None = None,
+    batch_size: int | None = None,
     lr: float = 0.01,
+    preset: str = "dev",
+    partition_method: str = "iid",
+    noniid_alpha: float = 0.5,
+    seed: int = 42,
+    client_num_cpus: float | None = None,
+    client_num_gpus: float | None = None,
+    max_update_norm: float | None = None,
+    server_dp_noise: float = 0.0,
+    quantization_bits: int | None = None,
+    topk_ratio: float | None = None,
+    fedprox_mu: float = 0.0,
+    malicious_clients: int = 0,
 ) -> Dict[str, Any]:
     """Run a single FL experiment with the specified aggregation method."""
+    resource_config = resolve_resource_config(
+        preset=preset,
+        model_name=model_name,
+        num_clients=num_clients,
+        num_rounds=num_rounds,
+        epochs=epochs,
+        batch_size=batch_size,
+        client_num_cpus=client_num_cpus,
+        client_num_gpus=client_num_gpus,
+    )
+    num_clients = int(resource_config["num_clients"])
+    num_rounds = int(resource_config["num_rounds"])
+    epochs = int(resource_config["epochs"])
+    batch_size = int(resource_config["batch_size"])
     
-    print(f"\n{'='*60}")
-    print(f"Running experiment: {agg_method.upper()}")
-    print(f"{'='*60}")
+    LOGGER.info("")
+    LOGGER.info("=" * 60)
+    LOGGER.info("Running experiment: %s / %s / %s", agg_method.upper(), model_name, resource_config['preset'])
+    LOGGER.info("=" * 60)
     
     # Load data and create partitions
     x, y, _ = load_malmem("Obfuscated-MalMem2022.csv")
-    partitions, (test_x, test_y) = create_partitions(x, y, num_clients=num_clients)
+    if partition_method == "noniid":
+        partitions, (test_x, test_y) = create_noniid_partitions(
+            x, y, num_clients=num_clients, alpha=noniid_alpha, seed=seed
+        )
+    else:
+        partitions, (test_x, test_y) = create_partitions(x, y, num_clients=num_clients, seed=seed)
+    partitions = clone_partitions_with_label_flip(partitions, malicious_clients)
     
     n_features = x.shape[1]
-    train_cfg = TrainConfig(lr=lr, epochs=epochs, batch_size=batch_size)
+    train_cfg = TrainConfig(
+        lr=lr,
+        epochs=epochs,
+        batch_size=batch_size,
+        seed=seed,
+        fedprox_mu=fedprox_mu,
+    )
     
     # Create client function
     client_fn = create_client_fn(partitions, train_cfg, model_name)
+    if agg_method == "catboost" and model_name != "catboost":
+        raise ValueError("--methods catboost requires --model catboost")
     
     # Set up metrics file path
     metrics_file = f"state/metrics_{agg_method}.json"
     model_file = f"state/model_{agg_method}.npz"
     
-    # Create strategy based on aggregation method
+    # Create strategy using the factory (single entry-point)
     base_kwargs = dict(
         log_file=metrics_file,
         model_log_path=model_file,
+        reset_metrics=True,
+        metadata=build_experiment_metadata(
+            entrypoint="run_experiments.py",
+            preset=resource_config["preset"],
+            agg_method=agg_method,
+            model_name=model_name,
+            num_clients=num_clients,
+            num_rounds=num_rounds,
+            epochs=epochs,
+            batch_size=batch_size,
+            lr=lr,
+            partition_method=partition_method,
+            noniid_alpha=noniid_alpha if partition_method == "noniid" else None,
+            seed=seed,
+            client_num_cpus=resource_config["client_num_cpus"],
+            client_num_gpus=resource_config["client_num_gpus"],
+            max_update_norm=max_update_norm,
+            server_dp_noise=server_dp_noise,
+            quantization_bits=quantization_bits,
+            topk_ratio=topk_ratio,
+            fedprox_mu=fedprox_mu,
+            malicious_clients=malicious_clients,
+        ),
         fraction_fit=1.0,
         fraction_evaluate=1.0,
         min_fit_clients=num_clients,
         min_evaluate_clients=num_clients,
         min_available_clients=num_clients,
-        evaluate_metrics_aggregation_fn=_weighted_metrics,
+        evaluate_metrics_aggregation_fn=weighted_metrics,
+        evaluate_fn=make_central_eval_fn(model_name, n_features, test_x, test_y, seed),
     )
     
     # Initialize model parameters
-    if model_name == "logreg":
-        init_model = NumpyLogisticModel(n_features=n_features)
-    else:
-        init_model = TorchMLPModel(n_features=n_features, hidden1=128, hidden2=64)
-    
+    init_model = build_model(model_name, n_features, seed)
     init_params = ndarrays_to_parameters(init_model.get_parameters())
     base_kwargs["initial_parameters"] = init_params
     
-    if agg_method == "fedavg":
-        strategy = LoggedFedAvg(**base_kwargs)
-    else:
-        strategy = RobustLoggedFedAvg(
-            agg_method=agg_method,
-            trim_ratio=0.1,
-            krum_f=1,
-            flanders_z=None,
-            **base_kwargs,
-        )
+    strategy = create_strategy(
+        agg_method=agg_method,
+        max_update_norm=max_update_norm,
+        server_dp_noise=server_dp_noise,
+        quantization_bits=quantization_bits,
+        topk_ratio=topk_ratio,
+        seed=seed,
+        **base_kwargs,
+    )
     
     # Run simulation
     fl.simulation.start_simulation(
@@ -113,23 +168,16 @@ def run_experiment(
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
-        client_resources={"num_cpus": 1, "num_gpus": 0.0},
+        client_resources={
+            "num_cpus": resource_config["client_num_cpus"],
+            "num_gpus": resource_config["client_num_gpus"],
+        },
     )
     
     # Load and return results
-    metrics_path = Path(metrics_file)
-    if metrics_path.exists():
-        with open(metrics_path) as f:
-            results = json.load(f)
-        return {
-            "method": agg_method,
-            "rounds": results.get("rounds", []),
-            "loss": results.get("loss", []),
-            "accuracy": results.get("accuracy", []),
-            "precision": results.get("precision", []),
-            "recall": results.get("recall", []),
-            "f1": results.get("f1", []),
-        }
+    result = load_experiment_results(metrics_file)
+    if result:
+        return {"method": agg_method, **result}
     return {"method": agg_method, "error": "No metrics found"}
 
 
@@ -167,30 +215,65 @@ def summarize_results(all_results: List[Dict]) -> pd.DataFrame:
 
 
 def main():
-    # Configuration
-    NUM_ROUNDS = 5
-    NUM_CLIENTS = 2
-    MODEL_NAME = "logreg"  # Use logreg for faster experiments
-    
-    # Methods to compare
-    methods = ["fedavg", "median", "krum"]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--preset", default="dev", choices=["quick", "dev", "overnight", "quantum-quick"])
+    parser.add_argument("--num-rounds", type=int, default=None)
+    parser.add_argument("--num-clients", type=int, default=None)
+    parser.add_argument("--epochs", type=int, default=None)
+    parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--lr", type=float, default=0.05)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--client-num-cpus", type=float, default=None)
+    parser.add_argument("--client-num-gpus", type=float, default=None)
+    parser.add_argument("--max-update-norm", type=float, default=None)
+    parser.add_argument("--server-dp-noise", type=float, default=0.0)
+    parser.add_argument("--quantization-bits", type=int, choices=[4, 8], default=None)
+    parser.add_argument("--topk-ratio", type=float, default=None)
+    parser.add_argument("--fedprox-mu", type=float, default=0.0)
+    parser.add_argument("--malicious-clients", type=int, default=0)
+    parser.add_argument(
+        "--model",
+        default="logreg",
+        choices=["logreg", "mlp", "dp-mlp", "catboost", "hybrid-quantum"],
+    )
+    parser.add_argument("--partition-method", default="iid", choices=["iid", "noniid"])
+    parser.add_argument("--noniid-alpha", type=float, default=0.5)
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        default=["fedavg", "median", "krum"],
+        choices=["fedavg", "median", "trimmed", "krum", "bulyan", "mom", "catboost"],
+    )
+    args = parser.parse_args()
     
     # Run experiments
     all_results = []
-    for method in methods:
+    for method in args.methods:
         try:
             result = run_experiment(
                 agg_method=method,
-                num_rounds=NUM_ROUNDS,
-                num_clients=NUM_CLIENTS,
-                model_name=MODEL_NAME,
-                epochs=2,
-                batch_size=32,
-                lr=0.05,
+                num_rounds=args.num_rounds,
+                num_clients=args.num_clients,
+                model_name=args.model,
+                epochs=args.epochs,
+                batch_size=args.batch_size,
+                lr=args.lr,
+                preset=args.preset,
+                partition_method=args.partition_method,
+                noniid_alpha=args.noniid_alpha,
+                seed=args.seed,
+                client_num_cpus=args.client_num_cpus,
+                client_num_gpus=args.client_num_gpus,
+                max_update_norm=args.max_update_norm,
+                server_dp_noise=args.server_dp_noise,
+                quantization_bits=args.quantization_bits,
+                topk_ratio=args.topk_ratio,
+                fedprox_mu=args.fedprox_mu,
+                malicious_clients=args.malicious_clients,
             )
             all_results.append(result)
         except Exception as e:
-            print(f"Error running {method}: {e}")
+            LOGGER.error("Error running %s: %s", method, e)
             all_results.append({"method": method, "error": str(e)})
     
     # Create summary
@@ -208,11 +291,11 @@ def main():
     summary_path = Path("state/results_summary.csv")
     summary_df.to_csv(summary_path, index=False)
     
-    print(f"\nResults saved to {results_path}")
-    print(f"Summary saved to {summary_path}")
+    LOGGER.info("Results saved to %s", results_path)
+    LOGGER.info("Summary saved to %s", summary_path)
     
     # Create merged metrics for comparison dashboard
-    merged = {"fedavg": {}, "median": {}, "krum": {}}
+    merged = {method: {} for method in args.methods}
     for result in all_results:
         if "error" not in result:
             merged[result["method"]] = result

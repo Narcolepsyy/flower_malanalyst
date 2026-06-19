@@ -19,8 +19,8 @@ from typing import List, Tuple
 import numpy as np
 import torch
 
-from federated_malware.dataset_utils import load_feature_names, load_malmem
-from federated_malware.model_utils import NumpyLogisticModel, TorchMLPModel
+from federated_malware.dataset_utils import create_partitions, load_feature_names, load_malmem
+from federated_malware.model_utils import CatBoostModel, NumpyLogisticModel, TorchMLPModel
 
 
 def _load_parameters(npz_path: Path) -> Tuple[List[np.ndarray], int | None]:
@@ -56,8 +56,8 @@ def _infer_model_type(params: List[np.ndarray], override: str | None) -> str:
         return "logreg"
     if len(params) == 6 and params[-1].shape[-1] == 1:
         return "mlp"
-    # Hybrid quantum has 8 parameters (6 classical + 2 quantum layer params)
-    if len(params) == 8:
+    # Hybrid quantum has 8 or 9 parameters depending on bias configuration
+    if len(params) in (8, 9):
         return "hybrid-quantum"
     raise ValueError("Unable to infer model type from parameter shapes; pass --model explicitly")
 
@@ -68,10 +68,15 @@ def _build_model(params: List[np.ndarray], model_type: str, n_features: int):
         model.set_parameters(params)
         return model
     elif model_type == "catboost":
-        import pickle
         if len(params[0]) == 0:
             raise ValueError("CatBoost model not yet trained (empty parameters)")
-        model = pickle.loads(params[0].tobytes())
+        model = CatBoostModel(n_features=n_features)
+        model.set_parameters(params)
+        return model.model
+    elif model_type == "hybrid-quantum":
+        from federated_malware.models import HybridQuantumModel
+        model = HybridQuantumModel(n_features=n_features)
+        model.set_parameters(params)
         return model
     else:
         # torch layer shapes: [out_features, in_features]
@@ -178,7 +183,10 @@ def main() -> None:
     params, round_num = _load_parameters(model_path)
 
     feature_names = load_feature_names(args.data_path)
-    x, _, _ = load_malmem(args.data_path)
+    x_raw, y, _ = load_malmem(args.data_path)
+    partitions, (x_test, _) = create_partitions(x_raw, y, num_clients=1)
+    partition = partitions[0]
+    x = np.vstack([partition.train_x, partition.val_x, x_test])
     model_type = _infer_model_type(params, args.model)
     model = _build_model(params, model_type, n_features=x.shape[1])
 

@@ -7,51 +7,43 @@
   "top_features": [
     {
       "feature": "pslist.avg_threads",
-      "score": 1.3775103565520237
+      "score": 1.3751461761057524
     },
     {
       "feature": "modules.nmodules",
-      "score": 1.1890526644929524
+      "score": 1.1941810446683265
     },
     {
       "feature": "svcscan.process_services",
-      "score": 1.1884191955341241
+      "score": 1.1857011314676742
     },
     {
       "feature": "svcscan.shared_process_services",
-      "score": 1.0358636425552004
+      "score": 1.035878128397809
     },
     {
       "feature": "handles.nmutant",
-      "score": 0.9670952995119384
+      "score": 0.9672107912154897
     },
     {
       "feature": "svcscan.nservices",
-      "score": 0.9665645575991224
+      "score": 0.9657715079703542
     },
     {
       "feature": "dlllist.avg_dlls_per_proc",
-      "score": 0.8784429536568377
+      "score": 0.8734765633194157
     },
     {
       "feature": "pslist.nppid",
-      "score": 0.6205696768092412
+      "score": 0.6175396472628858
     },
     {
       "feature": "handles.nevent",
-      "score": 0.6027734282836228
+      "score": 0.5975409857558527
     },
     {
       "feature": "handles.nthread",
-      "score": 0.5865640983816578
-    },
-    {
-      "feature": "ldrmodules.not_in_load",
-      "score": 0.5552175682230416
-    },
-    {
-      "feature": "ldrmodules.not_in_mem",
-      "score": 0.5549907697215334
+      "score": 0.584528494917894
     }
   ]
 }

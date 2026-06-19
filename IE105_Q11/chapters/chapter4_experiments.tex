@@ -158,7 +158,7 @@ KRUM & 0.9983 & 0.9983 & 0.9977 & \textbf{0.9989} & \textbf{0.0090} \\ \hline
 \begin{enumerate}
     \item \textbf{Hiệu năng tổng thể trong điều kiện lý tưởng:} Cả ba chiến lược đều đạt độ chính xác rất cao ($> 99.7\%$). Do thực nghiệm chạy trong điều kiện phân phối dữ liệu IID và không có client độc hại (no malicious clients), kết quả của các thuật toán tiệm cận tương đương nhau, phản ánh sự hội tụ tốt về điểm tối ưu toàn cục của mô hình Logistic Regression.
     \item \textbf{So sánh FedAvg và Median:} Cả hai chiến lược đều đạt độ chính xác $99.83\%$, khẳng định hiệu quả tổng hợp trung bình hoặc trung vị khi các cập nhật cục bộ của client tương đối đồng nhất.
-    \item \textbf{Đánh giá Krum:} Krum đạt độ chính xác $99.79\%$, thấp hơn một chút so với FedAvg và Median ($99.83\%$). Điều này là do thuật toán Krum chỉ lựa chọn cập nhật đại diện từ một client duy nhất có khoảng cách Euclidean nhỏ nhất tới các client khác nhằm phòng thủ tấn công Byzantine. Trong kịch bản IID sạch không có tấn công, việc chỉ chọn một client làm giảm tính đa dạng dữ liệu đóng góp từ client còn lại, dẫn đến độ chính xác tổng thể và F1-Score bị ảnh hưởng nhẹ.
+    \item \textbf{Đánh giá Krum:} Krum đạt độ chính xác $99.83\%$, tương đương với FedAvg và Median. Điều này phù hợp với kỳ vọng lý thuyết khi chạy thực nghiệm trong điều kiện phân phối dữ liệu IID sạch không có tấn công, khiến ba chiến lược hội tụ về cùng một kết quả tối ưu.
 \end{enumerate}
 
 \textbf{Kết luận thực nghiệm:} Dựa trên các chỉ số Accuracy và F1, chúng tôi khuyến nghị sử dụng chiến lược \textbf{Median} cho hệ thống phát hiện mã độc này để đảm bảo độ tin cậy và tính bền vững cao nhất.

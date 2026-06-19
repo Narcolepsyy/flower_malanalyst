@@ -5,24 +5,15 @@ Flower server entrypoint using the custom LoggedFedAvg strategy.
 from __future__ import annotations
 
 import argparse
+import logging
 
 import flwr as fl
 
-from federated_malware.strategy import LoggedFedAvg, RobustLoggedFedAvg
+from federated_malware.experiment_utils import build_experiment_metadata, weighted_metrics
+from federated_malware.logging_utils import configure_logging
+from federated_malware.strategy_factory import create_strategy
 
-
-def _weighted_metrics(metrics):
-    """Aggregate client metrics weighted by num_examples."""
-    if not metrics:
-        return {}
-    total_examples = sum(num for num, _ in metrics)
-    if total_examples == 0:
-        return {}
-    keys = set().union(*(m.keys() for _, m in metrics))
-    aggregated = {}
-    for k in keys:
-        aggregated[k] = sum(num * m.get(k, 0.0) for num, m in metrics) / total_examples
-    return aggregated
+LOGGER = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,8 +42,13 @@ def parse_args() -> argparse.Namespace:
         "--agg-method",
         type=str,
         default="fedavg",
-        choices=["fedavg", "median", "trimmed", "krum"],
+        choices=["fedavg", "median", "trimmed", "krum", "bulyan", "mom", "catboost"],
         help="Aggregation rule for model updates",
+    )
+    parser.add_argument(
+        "--reset-metrics",
+        action="store_true",
+        help="Overwrite the metrics log at startup instead of appending to an existing file",
     )
     parser.add_argument(
         "--trim-ratio",
@@ -72,36 +68,59 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Z-score threshold for FLANDERS-like norm filter; disable if None",
     )
+    parser.add_argument("--mom-groups", type=int, default=3, help="Groups for median-of-means")
+    parser.add_argument("--max-update-norm", type=float, default=None, help="Clip client update norm")
+    parser.add_argument("--server-dp-noise", type=float, default=0.0, help="Gaussian server-DP noise multiplier")
+    parser.add_argument("--quantization-bits", type=int, choices=[4, 8], default=None)
+    parser.add_argument("--topk-ratio", type=float, default=None, help="Keep this fraction of update entries")
+    parser.add_argument("--seed", type=int, default=42, help="Server RNG seed")
     # SSL/TLS options for secure communication (mTLS)
     parser.add_argument("--ssl-certfile", type=str, default=None, help="Path to server SSL certificate")
     parser.add_argument("--ssl-keyfile", type=str, default=None, help="Path to server SSL private key")
     parser.add_argument("--ssl-ca-certfile", type=str, default=None, help="Path to CA certificate for client verification")
+    parser.add_argument("--log-level", default="INFO", help="Python logging level")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    configure_logging(args.log_level)
     base_kwargs = dict(
         log_file=args.log_file,
         model_log_path=args.model_save,
+        reset_metrics=args.reset_metrics,
+        metadata=build_experiment_metadata(
+            entrypoint="server.py",
+            agg_method=args.agg_method,
+            num_rounds=args.rounds,
+            min_clients=args.min_clients,
+            seed=args.seed,
+            max_update_norm=args.max_update_norm,
+            server_dp_noise=args.server_dp_noise,
+            quantization_bits=args.quantization_bits,
+            topk_ratio=args.topk_ratio,
+        ),
         fraction_fit=1.0,
         fraction_evaluate=1.0,
         min_fit_clients=args.min_clients,
         min_evaluate_clients=args.min_clients,
         min_available_clients=args.min_clients,
-        evaluate_metrics_aggregation_fn=_weighted_metrics,
+        evaluate_metrics_aggregation_fn=weighted_metrics,
     )
 
-    if args.agg_method == "fedavg":
-        strategy = LoggedFedAvg(**base_kwargs)
-    else:
-        strategy = RobustLoggedFedAvg(
-            agg_method=args.agg_method,
-            trim_ratio=args.trim_ratio,
-            krum_f=args.krum_f,
-            flanders_z=args.flanders_z,
-            **base_kwargs,
-        )
+    strategy = create_strategy(
+        agg_method=args.agg_method,
+        trim_ratio=args.trim_ratio,
+        krum_f=args.krum_f,
+        flanders_z=args.flanders_z,
+        mom_groups=args.mom_groups,
+        max_update_norm=args.max_update_norm,
+        server_dp_noise=args.server_dp_noise,
+        quantization_bits=args.quantization_bits,
+        topk_ratio=args.topk_ratio,
+        seed=args.seed,
+        **base_kwargs,
+    )
 
     # Load SSL certificates if provided
     certificates = None
@@ -115,7 +134,7 @@ def main() -> None:
             with open(args.ssl_ca_certfile, "rb") as f:
                 ca_cert = f.read()
         certificates = (server_cert, server_key, ca_cert) if ca_cert else (server_cert, server_key)
-        print(f"[Server] mTLS enabled with certificate: {args.ssl_certfile}")
+        LOGGER.info("mTLS enabled with certificate: %s", args.ssl_certfile)
 
     fl.server.start_server(
         server_address=args.address,
