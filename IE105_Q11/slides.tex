@@ -115,7 +115,7 @@
 \end{frame}
 
 \begin{frame}{Kiến trúc Mô hình Lai (Hybrid QNN)}
-    \begin{block}{Kiến trúc "Bánh kẹp" (Sandwich)}
+    \begin{block}{Kiến trúc ``Bánh kẹp'' (Sandwich)}
         \begin{enumerate}
             \item \textbf{Classical Encoder:} Mạng nơ-ron tuyến tính giảm chiều:
             $$55 \xrightarrow{\text{Linear}} 64 \xrightarrow{\text{ReLU}} 16 \xrightarrow{\text{ReLU}} 4 \xrightarrow{\text{Tanh}} \xrightarrow{\times \pi} \text{Rotation Angles}$$
@@ -162,7 +162,7 @@
         \item \textbf{Các Cơ chế Nâng cao Đã Hiện thực:}
         \begin{itemize}
             \item \textbf{Giảm băng thông:} Lượng tử hóa tham số (4/8-bit), thưa thớt hóa Top-k.
-            \item \textbf{Chống độc độc:} Giới hạn biên độ gradient, bộ lọc thống kê ngoại lai Z-score (FLANDERS).
+            \item \textbf{Chống đầu độc:} Giới hạn biên độ gradient, bộ lọc thống kê ngoại lai Z-score (FLANDERS).
             \item \textbf{Kiểm toán}: Chuỗi băm audit bảo mật SHA-256 trên log hiệu năng qua từng vòng.
             \item \textbf{Tối ưu hóa \& Phân tích}: Thuật toán FedProx xử lý dữ liệu Non-IID; đo lường ROC-AUC, PR-AUC và Confusion Matrix.
         \end{itemize}
