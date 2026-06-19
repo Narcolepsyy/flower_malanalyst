@@ -1,0 +1,83 @@
+\newpage
+\appendix
+\section{KẾT QUẢ BENCHMARK CHI TIẾT}
+\label{appendix:full_benchmark}
+
+Dưới đây là bảng kết quả chi tiết của toàn bộ 50 mô hình đã được thử nghiệm, sắp xếp theo chỉ số F1-Score giảm dần.
+
+% Giảm cỡ chữ xuống small hoặc footnotesize để bảng vừa vặn hơn
+\begin{small} 
+\begin{longtable}{|l|c|c|c|c|}
+\hline
+\textbf{Tên Mô hình} & \textbf{Acc} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\ \hline
+\endfirsthead
+
+% Tiêu đề cho các trang tiếp theo
+\multicolumn{5}{c}%
+{{\bfseries \tablename\ \thetable{} -- tiếp theo từ trang trước}} \\
+\hline
+\textbf{Tên Mô hình} & \textbf{Acc} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\ \hline
+\endhead
+
+% Chân trang cho các trang chưa kết thúc
+\hline \multicolumn{5}{|r|}{{Còn tiếp trang sau...}} \\ \hline
+\endfoot
+
+% Chân trang cho trang cuối cùng
+\hline
+\endlastfoot
+
+% --- DỮ LIỆU ---
+CatBoost (Tuned) & 0.9999 & 0.9999 & 1.0000 & 0.9999 \\ \hline
+CatBoost (200 iters) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+Extra Trees (100) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+XGBoost (Dart) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+XGBoost (200) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+XGBoost (Base) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+LightGBM (Tuned) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+Random Forest (500) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+Random Forest (Deep) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+Extra Trees (200) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+Extra Trees (500) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+LightGBM (200) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+CatBoost (Base) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+AdaBoost (Decision Tree) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+XGBoost (Tuned) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+Random Forest (200) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+Random Forest (100) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+AdaBoost (Base) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+HistGradientBoosting (200) & 0.9999 & 0.9997 & 1.0000 & 0.9999 \\ \hline
+LightGBM (Dart) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+LightGBM (Base) & 0.9999 & 0.9998 & 1.0000 & 0.9999 \\ \hline
+HistGradientBoosting (Deep) & 0.9999 & 0.9998 & 0.9999 & 0.9999 \\ \hline
+Bagging (Decision Tree) & 0.9999 & 0.9998 & 0.9999 & 0.9999 \\ \hline
+LightGBM (GOSS) & 0.9999 & 0.9998 & 0.9999 & 0.9999 \\ \hline
+GradientBoosting (200) & 0.9998 & 0.9998 & 0.9998 & 0.9998 \\ \hline
+HistGradientBoosting (Base) & 0.9998 & 0.9998 & 0.9999 & 0.9998 \\ \hline
+GradientBoosting (Base) & 0.9998 & 0.9998 & 0.9998 & 0.9998 \\ \hline
+\textbf{MLP (Deep)} & 0.9998 & 0.9996 & 1.0000 & 0.9998 \\ \hline
+MLP (2x128) & 0.9997 & 0.9996 & 0.9999 & 0.9997 \\ \hline
+KNN (k=5) & 0.9997 & 0.9997 & 0.9997 & 0.9997 \\ \hline
+MLP (Adam) & 0.9997 & 0.9996 & 0.9999 & 0.9997 \\ \hline
+MLP (3x128) & 0.9997 & 0.9996 & 0.9999 & 0.9997 \\ \hline
+Decision Tree & 0.9997 & 0.9997 & 0.9997 & 0.9997 \\ \hline
+MLP (Wide) & 0.9997 & 0.9997 & 0.9997 & 0.9997 \\ \hline
+MLP (2x64) & 0.9996 & 0.9995 & 0.9998 & 0.9996 \\ \hline
+KNN (Weighted) & 0.9996 & 0.9997 & 0.9995 & 0.9996 \\ \hline
+MLP (1x128) & 0.9995 & 0.9994 & 0.9997 & 0.9995 \\ \hline
+KNN (k=10) & 0.9995 & 0.9997 & 0.9994 & 0.9995 \\ \hline
+Linear SVC & 0.9995 & 0.9994 & 0.9996 & 0.9995 \\ \hline
+SVC (RBF) & 0.9994 & 0.9993 & 0.9994 & 0.9994 \\ \hline
+MLP (1x64) & 0.9993 & 0.9992 & 0.9995 & 0.9993 \\ \hline
+Logistic Regression (L2) & 0.9992 & 0.9993 & 0.9991 & 0.9992 \\ \hline
+KNN (k=20) & 0.9991 & 0.9988 & 0.9994 & 0.9991 \\ \hline
+Logistic Regression (ElasticNet) & 0.9985 & 0.9984 & 0.9985 & 0.9985 \\ \hline
+Logistic Regression (L1) & 0.9985 & 0.9984 & 0.9985 & 0.9985 \\ \hline
+Bagging (LogReg) & 0.9967 & 0.9959 & 0.9975 & 0.9967 \\ \hline
+QDA & 0.9955 & 0.9981 & 0.9929 & 0.9955 \\ \hline
+LDA & 0.9952 & 0.9953 & 0.9952 & 0.9952 \\ \hline
+Naive Bayes & 0.9927 & 0.9897 & 0.9957 & 0.9927 \\ \hline
+Bagging (SVC) & 0.9848 & 0.9755 & 0.9946 & 0.9850 \\ \hline
+
+\end{longtable}
+\end{small}
