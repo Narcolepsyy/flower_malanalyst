@@ -12,7 +12,7 @@ Trong đó:
     \item $F_k(w)$ là hàm mất mát cục bộ (local loss function) của client $k$, thường được định nghĩa là trung bình lỗi dự đoán trên tập dữ liệu $D_k$.
 \end{itemize}
 
-Thuật toán nền tảng được sử dụng rộng rãi nhất trong FL và cũng là chiến lược mặc định của Flower là Federated Averaging (FedAvg). Quy trình hoạt động của FedAvg bao gồm 4 bước lặp lại trong mỗi vòng huấn luyện (communication round) $t$:
+Thuật toán nền tảng được sử dụng rộng rãi nhất trong FL và cũng là chiến lược mặc định của Flower là Federated Averaging (FedAvg) \cite{mcmahan2017communication}. Quy trình hoạt động của FedAvg bao gồm 4 bước lặp lại trong mỗi vòng huấn luyện (communication round) $t$:
 
 \begin{enumerate}
     \item \textbf{Selection \& Distribution:} Máy chủ trung tâm (Server) chọn một tập con các client $S_t$ (với tỷ lệ $C$) và gửi tham số mô hình toàn cục hiện tại $w_t$ cho họ.
@@ -45,7 +45,7 @@ $$w_{j, t+1} = \frac{1}{|U_j|} \sum_{k \in U_j} w_{j, t+1}^k$$
 Trong đó $U_j$ là tập hợp các chỉ số client còn lại sau khi đã loại bỏ $\beta$ tỷ lệ phần trăm các giá trị biên. Phương pháp này đặc biệt hiệu quả trong việc chống lại các tấn công làm lệch phân phối (distributional skew) trong khi vẫn giữ được tốc độ hội tụ tốt hơn Median.
 
 \subsubsection{Krum và Multi-Krum}
-Khác với hai phương pháp trên thực hiện trên từng tọa độ (coordinate-wise), Krum lựa chọn một cập nhật mô hình từ một client thực tế mà "giống" với số đông nhất dựa trên khoảng cách Euclidean.
+Khác với hai phương pháp trên thực hiện trên từng tọa độ (coordinate-wise), Krum \cite{blanchard2017machine} lựa chọn một cập nhật mô hình từ một client thực tế mà "giống" với số đông nhất dựa trên khoảng cách Euclidean.
 Với mỗi client $k$, ta tính điểm số $S(k)$ là tổng bình phương khoảng cách đến $K - f - 2$ client gần nhất ($f$ là số lượng client độc hại dự kiến):
 $$S(k) = \sum_{i \rightarrow k} ||w^k - w^i||^2$$
 Krum sẽ chọn update $w^{k^*}$ sao cho $S(k^*)$ là nhỏ nhất:

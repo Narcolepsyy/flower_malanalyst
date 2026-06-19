@@ -237,7 +237,7 @@ Hệ thống thiết lập cơ chế bảo vệ riêng tư thông qua các tham 
     \item \textbf{Kế toán và Đo lường Riêng tư ($\epsilon, \delta$):} Ngân sách riêng tư $\epsilon$ đạt được thực tế không được dùng làm ràng buộc đầu vào trực tiếp để sinh nhiễu, mà được tính toán và báo cáo lại một cách hậu nghiệm (post-facto) thông qua cơ chế Privacy Accountant của Opacus sau khi kết thúc huấn luyện với một mức xác suất rò rỉ thông tin mục tiêu $\delta$ (được đặt mặc định là $1e-5$).
 \end{itemize}
 
-Việc tích hợp Opacus biến trình tối ưu hóa thông thường (Adam/SGD) thành \path{DPOptimizer}, đảm bảo các đảm bảo toán học về sự riêng tư được thực thi nghiêm ngặt trong mỗi bước huấn luyện cục bộ.
+Việc tích hợp Opacus \cite{yousefpour2021opacus} biến trình tối ưu hóa thông thường (Adam/SGD) thành \path{DPOptimizer}, đảm bảo các đảm bảo toán học về sự riêng tư được thực thi nghiêm ngặt trong mỗi bước huấn luyện cục bộ.
 
 \subsection{Các Cơ chế Nâng cao Thực thể trong Hệ thống}
 
@@ -245,7 +245,7 @@ Việc tích hợp Opacus biến trình tối ưu hóa thông thường (Adam/SG
 
 \begin{enumerate}
     \item \textbf{Mở rộng thuật toán Robust Aggregation:}
-    Bên cạnh Median và Krum, hệ thống hỗ trợ chiến lược \textbf{Bulyan} và \textbf{Median-of-Means (MoM)} nhằm nâng cao khả năng chống chịu tấn công đầu độc Byzantine từ các client độc hại.
+    Bên cạnh Median và Krum, hệ thống hỗ trợ chiến lược \textbf{Bulyan} \cite{mhamdi2018byzantine} và \textbf{Median-of-Means (MoM)} \cite{lerasle2011robust} nhằm nâng cao khả năng chống chịu tấn công đầu độc Byzantine từ các client độc hại.
     
     \item \textbf{Cơ chế nén mô hình giảm băng thông truyền thông:}
     \begin{itemize}
@@ -266,5 +266,5 @@ Việc tích hợp Opacus biến trình tối ưu hóa thông thường (Adam/SG
     Sau mỗi vòng tổng hợp, máy chủ thực hiện băm chuỗi bảo mật SHA-256 trên toàn bộ thông số hiệu năng lưu trữ trong log, tạo ra một sổ cái bất biến để kiểm toán (audit) lịch sử huấn luyện hệ thống, chống lại việc làm giả nhật ký hệ thống.
 
     \item \textbf{Kế toán và Điều chuẩn tối ưu:}
-    Hỗ trợ thuật toán \textbf{FedProx} (\texttt{--fedprox-mu}) bổ sung số hạng phạt proximal term để xử lý hiện tượng không đồng nhất (heterogeneity) của dữ liệu Non-IID; đồng thời mở rộng đo lường đầy đủ các chỉ số an ninh mạng quan trọng gồm \textbf{ROC-AUC}, \textbf{PR-AUC} và \textbf{Confusion Matrix} (ma trận nhầm lẫn).
+    Hỗ trợ thuật toán \textbf{FedProx} \cite{li2020federated} (\texttt{--fedprox-mu}) bổ sung số hạng phạt proximal term để xử lý hiện tượng không đồng nhất (heterogeneity) của dữ liệu Non-IID; đồng thời mở rộng đo lường đầy đủ các chỉ số an ninh mạng quan trọng gồm \textbf{ROC-AUC}, \textbf{PR-AUC} và \textbf{Confusion Matrix} (ma trận nhầm lẫn).
 \end{enumerate}
