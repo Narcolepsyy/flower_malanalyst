@@ -138,6 +138,8 @@ Mô hình được thiết kế theo kiến trúc "bánh kẹp" (sandwich), kế
     
     \item \textbf{Khối Phân loại (Head Classifier):}
     Kết quả từ lớp lượng tử được đưa qua một lớp tuyến tính cuối cùng ($1 \rightarrow 1$) kết hợp với hàm mất mát \textit{BCEWithLogitsLoss} (chứa sẵn hàm kích hoạt \textit{Sigmoid}) để huấn luyện mô hình đưa ra xác suất dự đoán lớp nhị phân (Malware/Benign).
+    
+    \textit{Đánh giá về tính biểu diễn:} Thiết kế đo lường giá trị kỳ vọng Pauli-Z chỉ trên duy nhất một qubit (Qubit 0) kết hợp với bộ phân loại tuyến tính $1 \rightarrow 1$ tạo ra một phễu thông tin (bottleneck) rất hẹp. Việc mô hình đạt độ chính xác cao ($\approx 99.92\%$) thực chất phần lớn phụ thuộc vào năng lực trích xuất và nén đặc trưng phi tuyến cực kỳ mạnh mẽ của khối mã hóa cổ điển (Classical Encoder $55 \rightarrow 64 \rightarrow 16 \rightarrow 4$) trước đó, chứ không hoàn toàn phản ánh sức mạnh tính toán vượt trội của bản thân mạch lượng tử 4-qubit. Thiết kế này được lựa chọn nhằm tối ưu hóa tính toán trên các tài nguyên giả lập hạn chế, nhưng sự minh bạch về nguồn gốc độ chính xác này là cần thiết để tránh phóng đại vai trò của mạch lượng tử.
 \end{enumerate}
 
 

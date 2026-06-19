@@ -133,7 +133,7 @@ Tại sao Federated Learning lại cho kết quả tốt hơn mô hình tập tr
     \item \textbf{Điều chuẩn ngầm (Implicit Regularization):} Việc cập nhật trọng số trung bình sau mỗi vòng giúp loại bỏ nhiễu ngẫu nhiên (stochastic noise) của từng client, hoạt động như một cơ chế điều chuẩn giúp mô hình tổng quát hóa tốt hơn (tránh Overfitting).
 \end{enumerate}
 
-\textbf{Kết luận:} Trong thử nghiệm của chúng tôi, Federated Learning cho thấy kết quả khả quan hơn so với huấn luyện tập trung đối với mô hình Hybrid QNN. Tuy nhiên, kết quả centralized ($\approx 93.75\%$) được ghi nhận từ notebook thực nghiệm ngoài pipeline chính và chỉ dựa trên một lần chạy duy nhất. Cần thêm các thí nghiệm với nhiều lần chạy (mean$\pm$std) và cùng seed để có thể khẳng định chắc chắn xu hướng này.
+\textbf{Kết luận:} Trong thử nghiệm của chúng tôi, Federated Learning cho thấy kết quả khả quan hơn so với huấn luyện tập trung đối với mô hình Hybrid QNN. Tuy nhiên, kết quả centralized ($\approx 93.75\%$) được ghi nhận từ một lần chạy duy nhất trên tệp thử nghiệm lượng tử tại \path{notebooks/quantum_experiments.ipynb} ngoài pipeline chính. Cần thêm các thí nghiệm với nhiều lần chạy (mean$\pm$std) và cùng seed để có thể khẳng định chắc chắn xu hướng này.
 
 \subsection{So sánh các Chiến lược Tổng hợp (Aggregation Strategies Comparison)}
 
