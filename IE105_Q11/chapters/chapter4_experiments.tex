@@ -190,7 +190,7 @@ Bảng dưới đây liệt kê 10 đặc trưng có điểm số quan trọng (
 \end{tabular}
 \end{table}
 
-\textit{\textbf{Lưu ý về tái lập:} Bảng trên được trích xuất từ kết quả giải thích mô hình Logistic Regression trong một phiên thực nghiệm trước đó. Artifact hiện tại trong \path{state/explanations.json} chứa kết quả của mô hình MLP (round 3) với các score bị triệt tiêu ($\approx 0$) do hiện tượng bão hòa gradient. Để tái lập bảng này, cần chạy lại module XAI với mô hình logreg đã hội tụ bằng lệnh:}
+\textit{\textbf{Lưu ý về tái lập:} Số liệu trong bảng được trích xuất trực tiếp từ kết quả giải thích mô hình toàn cục Logistic Regression ở vòng thứ 5 (vòng hội tụ), hiện được lưu trữ đầy đủ trong tệp tin \path{state/explanations.json}. Lệnh thực thi để tạo ra kết quả này là:}
 \begin{center}
 \texttt{python explain.py --model logreg --top-k 10}
 \end{center}
