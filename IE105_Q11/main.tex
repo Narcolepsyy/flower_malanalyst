@@ -1,0 +1,268 @@
+\documentclass[12pt,a4paper]{article}
+
+% ========================
+% PACKAGES
+% ========================
+\usepackage[utf8]{vietnam}
+\usepackage[T5]{fontenc}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{color}
+\usepackage{framed}
+\usepackage{longtable}
+\usepackage{amsmath, amssymb}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{graphicx}
+\usetikzlibrary{calc} % Thư viện để tính toán toạ độ cho khung viền
+
+% ========================
+% PAGE SETUP
+% ========================
+\geometry{
+  a4paper,
+  left=2.5cm,
+  right=2.5cm,
+  top=2.5cm,
+  bottom=2.5cm,
+  headheight=15pt
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Nhập môn Đảm bảo và An Ninh Thông tin}
+\fancyhead[R]{Federated Learning}
+\fancyfoot[C]{\thepage}
+
+% ========================
+% NUMBERING CONFIG
+% ========================
+\setcounter{secnumdepth}{3} 
+\setcounter{tocdepth}{3}
+
+\renewcommand{\thesection}{\Roman{section}}
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+% ========================
+% TITLE FORMAT
+% ========================
+\titleformat{\section}[block]
+  {\normalfont\Large\bfseries\centering}
+  {CHƯƠNG \thesection:}
+  {0.5em}
+  {\MakeUppercase}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}
+  {\thesubsection.}
+  {0.5em}
+  {}
+
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}
+  {\thesubsubsection.}
+  {0.5em}
+  {}
+
+% ========================
+% DOCUMENT
+% ========================
+\begin{document}
+
+% ========================
+% TITLE PAGE
+% ========================
+\begin{titlepage}
+    % --- TẠO KHUNG VIỀN (Giữ nguyên) ---
+    \begin{tikzpicture}[overlay,remember picture]
+        \draw [line width=3pt]
+            ($ (current page.north west) + (2.0cm,-2.0cm) $)
+            rectangle
+            ($ (current page.south east) + (-2.0cm,2.0cm) $);
+        \draw [line width=1pt]
+            ($ (current page.north west) + (2.15cm,-2.15cm) $)
+            rectangle
+            ($ (current page.south east) + (-2.15cm,2.15cm) $); 
+    \end{tikzpicture}
+
+    \begin{center}
+        \vspace*{-0.5cm} % Kéo nội dung lên cao một chút để tránh tràn dưới
+        
+        % --- HEADER ---
+        \textbf{\large ĐẠI HỌC QUỐC GIA TP. HỒ CHÍ MINH} \\
+        \textbf{\large TRƯỜNG ĐẠI HỌC CÔNG NGHỆ THÔNG TIN} \\
+        \textbf{\large KHOA KHOA HỌC VÀ KỸ THUẬT THÔNG TIN} \\
+        
+        \vspace{1cm} % Khoảng cách đến Logo
+
+        % --- LOGO ---
+        % Giảm kích thước logo xuống xíu cho đỡ chiếm chỗ (4cm -> 3.5cm)
+        \includegraphics[width=3.5cm]{asset/uit_logo.png} 
+        
+        \vspace{1cm} % Khoảng cách đến tên Báo cáo
+
+        % --- REPORT TYPE ---
+        \textbf{\LARGE BÁO CÁO ĐỒ ÁN} \\[0.3cm]
+        \textbf{\Large Môn: Nhập môn Đảm bảo và An ninh Thông tin} \\
+        
+        \vspace{1.5cm} % Khoảng cách đến Tên đề tài
+
+        % --- TITLE ---
+        \textbf{\Large ĐỀ TÀI:} \\[0.3cm]
+        \begin{minipage}{0.9\textwidth}
+            \centering
+            % Dùng \parbox hoặc để tự nhiên, LaTeX sẽ tự xuống dòng nếu tên quá dài
+            \textbf{\MakeUppercase{Nghiên cứu các mô hình trong Học Liên Kết (Federated Learning) sử dụng Flower framework}}
+        \end{minipage}
+        
+        \vfill % Tự động đẩy phần thông tin xuống dưới, nhưng không quá sát đáy
+
+        % --- INFO TABLE (Đã sửa lại form cho nhóm) ---
+        \begin{table}[h]
+            \centering
+            \renewcommand{\arraystretch}{1.2} % Tăng khoảng cách giữa các dòng trong bảng cho dễ nhìn
+            \begin{tabular}{p{5cm} l} % Cột 1 rộng 5cm, Cột 2 tự động dãn
+                \textbf{Giảng viên hướng dẫn:} & TS. Nguyễn Tấn Cầm \\
+                & \\ % Dòng trống tạo khoảng cách
+                \textbf{Sinh viên thực hiện:}  & 1. Trần Tấn Khải - 23520680 \\ % Tên 1
+                                               & 2. Trần Hải Đông - 23520300 \\   % Tên 2
+                & \\ % Dòng trống
+                \textbf{Lớp:}                  & IE105.Q11.CNVN
+            \end{tabular}
+        \end{table}
+
+        \vfill % Đẩy ngày tháng xuống sát khung dưới
+        
+        % --- DATE ---
+        \textbf{TP. Hồ Chí Minh, tháng 12 năm 2025}
+        \vspace{1cm} % Tạo khoảng hở nhỏ so với khung viền dưới
+    \end{center}
+\end{titlepage}
+
+% ==================================================================
+% TRANG 1: DANH SÁCH THÀNH VIÊN & PHÂN CÔNG (Ảnh thẻ DỌC)
+% ==================================================================
+\begin{center}
+     \textbf{\Large DANH SÁCH THÀNH VIÊN NHÓM}
+\end{center}
+\vspace{0.2cm} % Tạo một chút khoảng cách với hình bên dưới
+\begin{figure}[h]
+    \centering
+    % --- THÀNH VIÊN 1 ---
+    \begin{minipage}{0.25\textwidth}
+        \centering
+        \begin{tikzpicture}
+            % 1. Vẽ khung viền (để hiển thị)
+            \draw[thick] (0,0) rectangle (3,4);
+            
+            % 2. Tạo vùng cắt ảnh (clipping path)
+            % Bất cứ thứ gì vẽ sau dòng này sẽ chỉ hiển thị trong hình chữ nhật này.
+            \clip (0,0) rectangle (3,4);
+            
+            % 3. Chèn ảnh và căn giữa vùng cắt
+            % width=3cm: Đặt chiều rộng ảnh là 3cm để vừa chiều ngang khung.
+            % keepaspectratio: Giữ nguyên tỉ lệ ảnh, chiều cao tự động điều chỉnh.
+            % at (1.5,2): Đặt tâm ảnh vào tâm của khung cắt.
+            % Thay đường dẫn ảnh thực tế của bạn vào đây: {asset/chien.jpg}
+            \node at (1.5,2) {\includegraphics[width=3cm, keepaspectratio]{asset/download (1).jpeg}};
+        \end{tikzpicture}
+        \vspace{0.3cm}
+        
+        \textbf{Trần Tấn Khải}\\
+        MSSV: 23520680\\
+        (Nhóm trưởng)
+    \end{minipage}
+    \hfill
+    % --- THÀNH VIÊN 2 ---
+    \begin{minipage}{0.25\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \draw[thick] (0,0) rectangle (3,4);
+            \clip (0,0) rectangle (3,4);
+            \node at (1.5,2) {\includegraphics[width=3cm, keepaspectratio]{asset/download.jpeg}};
+        \end{tikzpicture}
+        \vspace{0.3cm}
+        
+        \textbf{Trần Hải Đông}\\
+        MSSV: 23520300\\
+        (Thành viên)
+    \end{minipage}
+\end{figure}
+
+\vspace{0.5cm}
+
+
+% ==================================================================
+% LỜI CẢM ƠN
+% ==================================================================
+\newpage
+\thispagestyle{empty} % Không đánh số trang cho trang này
+
+\begin{center}
+    \section*{LỜI CẢM ƠN}
+    \addcontentsline{toc}{section}{Lời cảm ơn} % Thêm vào mục lục dù không đánh số chương
+\end{center}
+
+\vspace{1cm}
+
+Lời đầu tiên, chúng em xin gửi lời cảm ơn chân thành và sâu sắc nhất đến TS. Nguyễn Tấn Cầm, giảng viên hướng dẫn môn học Nhập môn Đảm bảo An toàn Thông tin. Thầy đã tận tình truyền đạt những kiến thức nền tảng quý báu, định hướng tư duy nghiên cứu và tạo mọi điều kiện thuận lợi để chúng em có thể tiếp cận với đề tài đầy thách thức nhưng cũng rất thú vị về \textit{Federated Learning} sử dụng \textit{Flower framework}.
+
+Chúng em cũng xin gửi lời tri ân đến quý Thầy, Cô trong Khoa Khoa học và Kỹ thuật Thông tin cùng Ban Giám hiệu Trường Đại học Công nghệ Thông tin (ĐHQG-HCM) đã xây dựng môi trường học tập năng động, sáng tạo và cung cấp cơ sở vật chất tốt nhất để sinh viên chúng em có thể hoàn thành đồ án này.
+
+Đặc biệt, đồ án này là kết quả của sự nỗ lực không ngừng nghỉ và tinh thần làm việc nhóm nghiêm túc của tất cả các thành viên. Chúng em xin trân trọng cảm ơn sự đồng hành, hỗ trợ lẫn nhau trong suốt quá trình, từ việc tìm hiểu lý thuyết toán học phức tạp, triển khai mã nguồn mô phỏng, đến việc phân tích và đánh giá kết quả thực nghiệm.
+
+Mặc dù đã rất nỗ lực, nhưng do giới hạn về mặt thời gian cũng như kiến thức còn hạn chế, báo cáo khó tránh khỏi những thiếu sót. Chúng em rất mong nhận được những ý kiến đóng góp quý báu từ Thầy và các bạn để đề tài được hoàn thiện hơn, cũng như tích lũy thêm kinh nghiệm cho các nghiên cứu sau này.
+
+
+% ==================================================================
+% TRANG 2: MỤC LỤC
+% ==================================================================
+\newpage
+\tableofcontents
+\newpage
+
+% ... (Tiếp tục input các chương ở dưới) ...
+
+% ========================
+% CHAPTERS
+% ========================
+\input{chapters/chapter1_introduction.tex}
+\newpage
+\input{chapters/chapter2_theory.tex}
+\newpage
+\input{chapters/chapter3_methodology.tex}
+\newpage
+\input{chapters/chapter4_experiments.tex}
+\newpage
+\input{chapters/chapter5_results.tex}
+\newpage % Bắt buộc sang trang mới
+
+\input{chapters/appendix}
+
+% ========================
+% TÀI LIỆU THAM KHẢO
+% ========================
+
+% 1. Đổi tên tiêu đề thành "TÀI LIỆU THAM KHẢO" và căn giữa
+\renewcommand\refname{\centering TÀI LIỆU THAM KHẢO}
+
+% 2. Thêm vào Mục lục (nhưng không đánh số chương)
+\phantomsection
+\addcontentsline{toc}{section}{Tài liệu tham khảo}
+
+% 3. Cấu hình kiểu hiển thị (ieeetr: theo thứ tự, plain: theo tên tác giả)
+\bibliographystyle{ieeetr}
+
+% 4. QUAN TRỌNG: Hiển thị toàn bộ danh sách trong file .bib
+\nocite{*} 
+
+% 5. Gọi file ref.bib
+\bibliography{ref}
+\end{document}
