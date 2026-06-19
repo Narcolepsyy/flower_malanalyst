@@ -1,0 +1,265 @@
+\section{PHƯƠNG PHÁP THỰC HIỆN}
+
+\subsection{Kiến trúc Tổng thể Hệ thống}
+
+Hệ thống được thiết kế theo mô hình Client-Server phi tập trung, sử dụng Framework Flower làm nền tảng cốt lõi. Kiến trúc bao gồm ba thành phần chính tương tác chặt chẽ với nhau thông qua giao thức mạng gRPC bảo mật:
+
+\begin{enumerate}
+    \item \textbf{Central Server (Máy chủ trung tâm):}
+    Đóng vai trò là bộ điều phối (Aggregator) chạy tập lệnh \texttt{server.py}. Server chịu trách nhiệm:
+    \begin{itemize}
+        \item \textbf{Quản lý chiến lược (Strategy Management):} Sử dụng lớp tùy chỉnh \texttt{LoggedFedAvg} và \texttt{RobustLoggedFedAvg} để điều phối quá trình huấn luyện. Hệ thống hỗ trợ các thuật toán tổng hợp bền vững (Robust Aggregation) như \textit{Coordinate-wise Median, Trimmed Mean}, và \textit{Krum} để chống lại các client độc hại.
+        \item \textbf{Lưu trữ trạng thái:} Ghi log các chỉ số tổng hợp (Accuracy, Precision, Recall, F1) vào tệp \texttt{state/metrics.json} và lưu trữ mô hình toàn cục mới nhất dưới dạng \texttt{.npz}.
+    \end{itemize}
+
+    \item \textbf{Federated Clients (Các thiết bị khách):}
+    Các client chạy tập lệnh \texttt{client.py}, mô phỏng các thiết bị biên tham gia mạng lưới.
+    \begin{itemize}
+        \item \textbf{Dữ liệu:} Mỗi client nắm giữ một phân hoạch (partition) của bộ dữ liệu \textit{Obfuscated-MalMem2022}. Dữ liệu có thể được phân chia theo cơ chế \textit{Stratified} (cân bằng) hoặc \textit{Dirichlet Non-IID} (mất cân bằng) để mô phỏng môi trường thực tế.
+        \item \textbf{Mô hình cục bộ:} Client hỗ trợ hai kiến trúc mô hình: \textit{Logistic Regression} (nhẹ, dựa trên NumPy) và \textit{MLP - Multi-layer Perceptron} (dựa trên PyTorch).
+        \item \textbf{Bảo mật riêng tư:} Tích hợp thư viện \textbf{Opacus} để áp dụng cơ chế \textit{Differential Privacy (DP)}, đảm bảo tính riêng tư của dữ liệu thông qua việc thêm nhiễu (noise) và cắt gradient (clipping) trước khi gửi về server.
+    \end{itemize}
+
+    \item \textbf{Monitoring \& Explainability Dashboard:}
+    Hệ thống giám sát thời gian thực được xây dựng bằng \textbf{Flask}, hoạt động độc lập với luồng huấn luyện:
+    \begin{itemize}
+        \item \textbf{Real-time Monitoring:} Dashboard liên tục truy vấn tệp \texttt{state/metrics.json} (polling) để vẽ biểu đồ diễn biến của Loss và Accuracy.
+        \item \textbf{Explainable AI (XAI):} Tích hợp module giải thích mô hình (\texttt{explain.py}). Dashboard hiển thị mức độ quan trọng của các đặc trưng (Feature Importance) dựa trên trọng số mô hình toàn cục, giúp các chuyên gia an ninh mạng hiểu được tại sao một mẫu lại bị phân loại là mã độc.
+    \end{itemize}
+\end{enumerate}
+
+
+
+\textbf{Cơ chế giao tiếp và Bảo mật:}
+Để đảm bảo an toàn cho kênh truyền thông trong môi trường mạng không tin cậy, hệ thống triển khai giao thức SSL/TLS phía máy chủ (Server-side TLS). Client sẽ xác thực danh tính của Server thông qua chứng chỉ số (Certificate) được cấp phát bởi một Root CA nội bộ trước khi thiết lập kết nối mã hóa trao đổi tham số.
+
+
+
+Quy trình hoạt động tổng quát diễn ra theo chu trình khép kín:
+\textit{Dữ liệu thô $\rightarrow$ Trích xuất đặc trưng (Feature Extraction) $\rightarrow$ Huấn luyện cục bộ (Local Training) $\rightarrow$ Tổng hợp tham số (Aggregation) $\rightarrow$ Cập nhật Dashboard.}
+
+\subsection{Thu thập và Tiền xử lý Dữ liệu (Data Preprocessing)}
+
+Để đánh giá hiệu quả của hệ thống trong việc phát hiện mã độc tinh vi, đặc biệt là các mã độc sử dụng kỹ thuật che giấu hành vi, nghiên cứu này sử dụng bộ dữ liệu \textbf{Obfuscated-MalMem2022} \cite{Carrier2022DetectingOM}. Đây là bộ dữ liệu chuyên dụng mô phỏng các kịch bản tấn công thực tế, nơi mã độc hoạt động ẩn mình trong bộ nhớ RAM để tránh sự phát hiện của các phần mềm diệt virus quét đĩa truyền thống.
+
+\subsubsection{Mô tả bộ dữ liệu}
+Bộ dữ liệu bao gồm các mẫu cân bằng giữa lớp Lành tính (Benign) và Mã độc (Malicious). Điểm đặc biệt của MalMem2022 là sự phân chia rõ ràng các loại mã độc theo phương pháp làm mờ (obfuscation):
+\begin{itemize}
+    \item \textbf{Cấu trúc dữ liệu:} Dữ liệu bao gồm 58,596 bản ghi (rows) với 57 cột thông tin (bao gồm 55 đặc trưng đầu vào cùng với cột nhãn \texttt{Class} và cột phân loại họ mã độc \texttt{Category}).
+    \item \textbf{Mức độ che giấu:} Mỗi họ mã độc được thể hiện dưới hai dạng: Mã độc gốc (Non-Obfuscated) và Mã độc đã làm mờ (Obfuscated). Việc này tạo ra thách thức lớn cho mô hình học máy, yêu cầu khả năng tổng quát hóa cao để phát hiện ra các biến thể che giấu của cùng một loại mã độc.
+\end{itemize}
+
+\subsubsection{Quy trình Tiền xử lý (Pipeline)}
+Dữ liệu thô từ bộ nhớ chứa các giá trị số học và đặc trưng được trích xuất. Quy trình xử lý được thực hiện qua các bước sau:
+
+\begin{enumerate}
+    \item \textbf{Data Cleaning:} Loại bỏ các cột thông tin không dùng làm đặc trưng đầu vào bao gồm cột phân loại họ mã độc (\texttt{Category}) và cột nhãn phân loại (\texttt{Class}) để phục vụ cho bài toán phân loại nhị phân cục bộ.
+    \item \textbf{Label Encoding:}
+    Dữ liệu nhãn được mã hóa cho bài toán thử nghiệm:
+    \begin{itemize}
+        \item \textit{Binary Classification:} Benign ($0$) vs. Malicious ($1$).
+    \end{itemize}
+    \item \textbf{Normalization (Chuẩn hóa):}
+    Các đặc trưng bộ nhớ thường có biên độ dao động rất lớn (ví dụ: số lượng handle có thể từ vài chục đến hàng nghìn). Chúng tôi áp dụng phương pháp \textit{Standard Scaling} (Z-score normalization) để đưa dữ liệu về phân phối chuẩn với trung bình $\mu = 0$ và độ lệch chuẩn $\sigma = 1$:
+    $$x' = \frac{x - \mu}{\sigma}$$
+    Bước này giúp thuật toán tối ưu (Gradient Descent) trong mạng Neural Network và mạch lượng tử (Quantum Circuit) hội tụ nhanh và ổn định hơn.
+\end{enumerate}
+
+\subsubsection{Phân chia dữ liệu (Data Partitioning)}
+Trong môi trường Federated Learning, dữ liệu không bao giờ được phân bố đều hoàn hảo giữa các thiết bị. Để mô phỏng kịch bản thực tế này, tập dữ liệu $D$ được chia cho $K$ client dựa trên phân phối Dirichlet với tham số nồng độ $\alpha$:
+$$P_k \sim \text{Dir}(\alpha)$$
+\begin{itemize}
+    \item Nếu $\alpha \rightarrow \infty$: Dữ liệu được chia đều và ngẫu nhiên (IID).
+    \item Nếu $\alpha \rightarrow 0$: Dữ liệu bị phân cực mạnh (Non-IID). Ví dụ: Client 1 chỉ chứa toàn mã độc Ransomware, Client 2 chỉ chứa phần mềm sạch.
+\end{itemize}
+Trong nghiên cứu này, chúng tôi thiết lập $\alpha = 0.5$ để tạo ra độ lệch vừa phải, thử thách khả năng tổng quát hóa của mô hình Federated Learning. Kết quả là mỗi client sẽ sở hữu một lượng dữ liệu không cân bằng về số lượng mẫu và tỷ lệ các lớp mã độc, buộc mô hình toàn cục phải học cách tổng hợp tri thức từ các nguồn dữ liệu lệch lạc (skewed data).
+
+\subsection{Lựa chọn Mô hình và Chiến lược Đánh giá (Model Selection \& Benchmarking Strategy)}
+
+Để xác định kiến trúc tối ưu nhất làm nòng cốt (backbone) cho hệ thống Federated Learning, nghiên cứu thực hiện một quy trình đánh giá toàn diện (extensive benchmark) trên tập dữ liệu tập trung. Danh sách các mô hình ứng viên được lựa chọn bao phủ đa dạng các phương pháp học máy, từ các thuật toán cơ bản đến các kỹ thuật State-of-the-Art (SOTA) hiện nay.
+
+\subsubsection{Các nhóm mô hình ứng viên}
+Chúng tôi chia các mô hình thử nghiệm thành 5 nhóm chính dựa trên nguyên lý hoạt động:
+
+\begin{itemize}
+    \item \textbf{Mô hình Tuyến tính và Xác suất (Linear \& Probabilistic):} Bao gồm \textit{Logistic Regression} (với các điều chuẩn L1, L2, ElasticNet), \textit{Support Vector Machines (SVM)}, \textit{Linear Discriminant Analysis (LDA)}, và \textit{Naive Bayes}. Nhóm này đóng vai trò làm cơ sở (baseline) để đánh giá độ phức tạp của dữ liệu.
+    
+    \item \textbf{Mô hình dựa trên Cây và Bagging (Tree-based \& Bagging):} Bao gồm \textit{Decision Tree}, \textit{Random Forest}, và \textit{Extra Trees} với các độ sâu khác nhau. Đây là các thuật toán mạnh mẽ truyền thống cho dữ liệu dạng bảng.
+    
+    \item \textbf{Mô hình Boosting tiên tiến (SOTA Gradient Boosting):} Chúng tôi tập trung khai thác các thư viện tối ưu nhất hiện nay gồm \textit{XGBoost}, \textit{LightGBM}, \textit{CatBoost} và \textit{Histogram-based Gradient Boosting}. Các biến thể nâng cao như DART (Dropouts meet Multiple Additive Regression Trees) và GOSS (Gradient-based One-Side Sampling) cũng được đưa vào thử nghiệm.
+    
+    \item \textbf{Mạng Nơ-ron (Neural Networks):} Các kiến trúc \textit{Multi-layer Perceptron (MLP)} được thiết kế đa dạng về độ sâu (Deep) và độ rộng (Wide), sử dụng các bộ tối ưu như Adam. Đây là nhóm mô hình quan trọng nhất để đánh giá khả năng tương thích với thuật toán \textit{FedAvg}.
+    
+    \item \textbf{Mô hình dựa trên láng giềng (Instance-based):} \textit{K-Nearest Neighbors (KNN)} với các trọng số khoảng cách khác nhau nhằm đánh giá tính cục bộ của dữ liệu.
+\end{itemize}
+
+\subsubsection{Giao thức đánh giá (Evaluation Protocol)}
+Để đảm bảo tính khách quan và hạn chế hiện tượng quá khớp (overfitting), quy trình đánh giá sử dụng kỹ thuật \textbf{Stratified K-Fold Cross-Validation} với $k=5$. Kỹ thuật này đảm bảo tỷ lệ các lớp mã độc được giữ nguyên trong mỗi phần chia (fold), phản ánh đúng phân phối thực tế của dữ liệu.
+
+Các chỉ số hiệu năng (Metrics) được ghi nhận bao gồm: \textit{Accuracy, Precision, Recall} và \textit{F1-Score}, trong đó F1-Score được ưu tiên làm tiêu chí xếp hạng chính do tính cân bằng giữa độ chính xác và độ phủ.
+
+\subsubsection{Tích hợp vào Flower Client}
+
+Mặc dù mô hình CatBoost cho kết quả benchmark rất cao, nhưng cấu trúc cây quyết định (Decision Trees) của nó gặp khó khăn trong việc tương thích với cơ chế cộng gộp trọng số (weight aggregation) của thuật toán FedAvg. Do đó, chúng tôi quyết định lựa chọn kiến trúc \textbf{DNN} để triển khai trong hệ thống Federated Learning.
+
+Để tham gia vào mạng lưới, mô hình PyTorch được đóng gói (wrapped) trong một lớp \texttt{FlowerClient} kế thừa từ lớp cơ sở \texttt{flwr.client.NumPyClient}. Ba phương thức cốt lõi được chúng tôi định nghĩa lại (override) bao gồm:
+
+\begin{enumerate}
+    \item \texttt{get\_parameters(config)}: Trích xuất toàn bộ trọng số (weights) và độ lệch (biases) của mạng nơ-ron cục bộ, chuyển đổi chúng sang định dạng danh sách các mảng NumPy để gửi về Server.
+    \item \texttt{fit(parameters, config)}:
+    \begin{itemize}
+        \item Tiếp nhận tham số toàn cục ($w_t$) từ Server và cập nhật vào mô hình cục bộ.
+        \item Thực hiện quy trình huấn luyện (training loop) trên tập dữ liệu riêng của client trong $E$ epochs.
+        \item Trả về bộ tham số mới ($w_{t+1}^k$), số lượng mẫu dữ liệu đã huấn luyện và các chỉ số giám sát (như training loss).
+    \end{itemize}
+    \item \texttt{evaluate(parameters, config)}: Sử dụng tham số toàn cục mới nhất để đánh giá độ chính xác trên tập dữ liệu kiểm thử (validation set) riêng biệt của client. Kết quả này giúp Server theo dõi được mức độ hội tụ của mô hình toàn cục.
+\end{enumerate}
+
+\subsection{Hiện thực và Tích hợp Quantum Machine Learning}
+
+\subsubsection{Kiến trúc Mô hình Lai ghép (Hybrid Architecture)}
+Mô hình được thiết kế theo kiến trúc "bánh kẹp" (sandwich), kết hợp các lớp nén dữ liệu cổ điển với mạch lượng tử biến thiên. Cấu trúc cụ thể bao gồm 3 khối chính:
+
+\begin{enumerate}
+    \item \textbf{Khối Mã hóa Cổ điển (Classical Encoder):}
+    Do số lượng qubit hiện tại còn hạn chế, chúng tôi sử dụng một mạng nơ-ron nhỏ để giảm chiều dữ liệu từ 55 đặc trưng đầu vào xuống còn 4 đặc trưng (tương ứng với 4 qubit) và chuyển về khoảng giá trị thích hợp cho các góc quay lượng tử qua hàm kích hoạt \textit{Tanh} và phép nhân tỉ lệ với $\pi$.
+    $$ \text{Input (55)} \xrightarrow{\text{Linear}} \text{Hidden (64)} \xrightarrow{\text{ReLU}} \text{Hidden (16)} \xrightarrow{\text{ReLU}} \text{Latent (4)} \xrightarrow{\text{Tanh}} \text{Latent' (4)} \xrightarrow{\times \pi} \text{Rotation Angles} $$
+    
+    \item \textbf{Lớp Lượng tử (Quantum Layer - VQC):}
+    Sử dụng thư viện \textit{PennyLane} để mô phỏng mạch lượng tử 4-qubit.
+    \begin{itemize}
+        \item \textbf{Embedding:} Dữ liệu góc quay được nhúng vào trạng thái lượng tử thông qua kỹ thuật nhúng góc \textit{AngleEmbedding} (mặc định sử dụng cổng xoay $R_x$).
+        \item \textbf{Entanglement (Vướng víu):} Sử dụng kiến trúc \textit{BasicEntanglerLayers} (gồm 2 lớp biến phân) để tạo sự vướng víu giữa các qubit thông qua các cổng CNOT và cổng xoay, giúp mô hình học được các mối quan hệ phi tuyến phức tạp.
+        \item \textbf{Measurement (Đo lường):} Đo lường giá trị kỳ vọng của toán tử Pauli-Z ($\langle PauliZ \rangle$) trên qubit đầu tiên (Qubit 0) để thu về kết quả là một số thực biểu diễn.
+    \end{itemize}
+    
+    \item \textbf{Khối Phân loại (Head Classifier):}
+    Kết quả từ lớp lượng tử được đưa qua một lớp tuyến tính cuối cùng ($1 \rightarrow 1$) kết hợp với hàm mất mát \textit{BCEWithLogitsLoss} (chứa sẵn hàm kích hoạt \textit{Sigmoid}) để huấn luyện mô hình đưa ra xác suất dự đoán lớp nhị phân (Malware/Benign).
+\end{enumerate}
+
+
+
+\subsubsection{Tích hợp vào Luồng Flower (Flower Integration)}
+Một thách thức lớn là làm sao để Framework Flower (vốn thiết kế cho Classical ML) có thể "hiểu" và truyền tải tham số của mạch lượng tử. Giải pháp của chúng tôi là:
+
+\begin{itemize}
+    \item \textbf{Thống nhất tham số:} Toàn bộ mô hình Hybrid (bao gồm trọng số mạng nơ-ron và tham số góc quay $\theta$ của mạch lượng tử) được quản lý bởi \texttt{torch.nn.Module} của PyTorch. PennyLane cung cấp giao diện \texttt{qnn.TorchLayer} giúp chuyển đổi mạch lượng tử thành một lớp PyTorch tiêu chuẩn.
+    \item \textbf{Flower Client:} Lớp \texttt{FlowerClient} coi mô hình Hybrid như một mô hình PyTorch thông thường.
+    \begin{itemize}
+        \item Hàm \texttt{get\_parameters}: Trích xuất cả trọng số cổ điển và lượng tử, tuần tự hóa thành danh sách \texttt{NumPy}.
+        \item Hàm \texttt{set\_parameters}: Nạp lại trọng số vào mạch lượng tử và mạng nơ-ron để cập nhật mô hình toàn cục.
+    \end{itemize}
+\end{itemize}
+Nhờ cơ chế này, Server Flower không cần biết bên dưới là mạch lượng tử hay mạng cổ điển, giúp hệ thống vận hành trong suốt (transparent).
+
+
+\subsubsection{Quy trình Huấn luyện Hybrid trong FL}
+Mô hình Hybrid được tích hợp vào \texttt{FlowerClient} tương tự như mô hình cổ điển. Đối với cơ chế tính toán gradient trong quá trình huấn luyện:
+\begin{itemize}
+    \item Trên môi trường giả lập phần cứng lượng tử (\texttt{default.qubit} của PennyLane), hệ thống sử dụng thuật toán lan truyền ngược trực tiếp (\texttt{diff\_method="backprop"}) để tối ưu hóa hiệu năng tính toán gradient.
+    \item Đối với các hệ thống lượng tử vật lý thực tế, gradient đi qua mạch lượng tử có thể được tính bằng phương pháp \textbf{Parameter-Shift Rule} (ước lượng đạo hàm riêng của mạch lượng tử đối với tham số $\theta$ bằng cách dịch chuyển góc quay một lượng nhỏ $\pm s$):
+    $$\frac{\partial f}{\partial \theta} \approx \frac{f(\theta + s) - f(\theta - s)}{2 \sin(s)}$$
+\end{itemize}
+Do việc giả lập hoặc thực thi mạch lượng tử yêu cầu tính toán lớn cho mỗi tham số cần tính gradient, việc huấn luyện mô hình QML tốn kém thời gian hơn so với các mạng nơ-ron thuần cổ điển.
+
+\subsection{Cơ chế Giải thích Mô hình (Explainable AI - XAI)}
+
+Một trong những thách thức lớn nhất của các hệ thống phát hiện xâm nhập dựa trên Học sâu là tính "hộp đen" (black-box nature). Để đảm bảo tính minh bạch và hỗ trợ các chuyên gia phân tích an ninh mạng, hệ thống tích hợp module giải thích (Explainability Module) nhằm định danh các đặc trưng đóng vai trò quan trọng nhất trong quyết định của mô hình.
+
+Module này hoạt động độc lập với luồng huấn luyện (Post-hoc Explanation), sử dụng trọng số của mô hình toàn cục sau khi hội tụ. Phương pháp trích xuất độ quan trọng đặc trưng (Feature Attribution) được tùy biến theo từng loại kiến trúc mô hình:
+
+\subsubsection{Đối với mô hình Logistic Regression}
+Do tính chất tuyến tính của mô hình, độ quan trọng của đặc trưng (feature importance) tỷ lệ thuận với độ lớn tuyệt đối của trọng số tương ứng.
+Với véc-tơ trọng số $w = [w_1, w_2, ..., w_n]$, độ quan trọng $I_j$ của đặc trưng thứ $j$ được tính bằng:
+$$I_j = |w_j|$$
+Các đặc trưng có trọng số dương lớn đóng góp vào việc phân loại là mã độc (Malware), trong khi trọng số âm lớn đóng góp vào lớp lành tính (Benign).
+
+\subsubsection{Đối với mô hình Deep Neural Network (MLP)}
+Do tính chất phi tuyến phức tạp của mạng nơ-ron, chúng tôi sử dụng phương pháp Gradient-based Saliency. Phương pháp này đo lường độ nhạy của đầu ra dự đoán $y$ đối với sự thay đổi của đầu vào $x$.
+Độ quan trọng $I_j$ được tính bằng trị tuyệt đối của đạo hàm riêng của đầu ra theo đặc trưng đầu vào thứ $j$, trung bình hóa trên một tập mẫu nền (background samples) $X_{bg}$:
+$$I_j = \frac{1}{N} \sum_{x \in X_{bg}} \left| \frac{\partial y}{\partial x_j} \right|$$
+Trong đó:
+\begin{itemize}
+    \item $N$ là số lượng mẫu trong tập nền (trong thực nghiệm, $N=256$).
+    \item Việc tính toán gradient $\frac{\partial y}{\partial x}$ được thực hiện tự động nhờ cơ chế Autograd của PyTorch.
+\end{itemize}
+
+Kết quả phân tích được xuất ra tệp \texttt{state/explanations.json} bao gồm danh sách $k$ đặc trưng hàng đầu (Top-k features). Dashboard sẽ đọc tệp này để hiển thị trực quan, giúp người dùng nhận diện ngay lập tức các hành vi đáng ngờ (ví dụ: tiến trình gọi API \texttt{VirtualAlloc} kết hợp với \texttt{WriteProcessMemory} thường là dấu hiệu của hành vi tiêm mã độc - Code Injection).
+\subsection{Triển khai Vận hành Hệ thống (System Deployment)}
+
+Hệ thống được thiết kế để vận hành linh hoạt thông qua giao diện dòng lệnh (CLI), cho phép tùy chỉnh các tham số cấu hình mà không cần can thiệp vào mã nguồn.
+
+\subsubsection{Cấu hình phía Máy chủ (Server Side)}
+Máy chủ đóng vai trò điều phối viên, chịu trách nhiệm khởi tạo chiến lược và lắng nghe kết nối từ client. Mã nguồn được triển khai trong tệp \texttt{server.py} với các tùy chọn chính:
+\begin{itemize}
+    \item \textbf{Cấu hình vòng lặp:} Số lượng vòng huấn luyện (\texttt{--rounds}) được thiết lập tùy theo độ phức tạp của mô hình (thường từ 3 đến 10 vòng cho thực nghiệm).
+    \item \textbf{Chiến lược tổng hợp:} Người quản trị có thể lựa chọn thuật toán tổng hợp thông qua tham số \texttt{--agg-method}. Hệ thống hỗ trợ: \textit{FedAvg} (mặc định), \textit{Median}, \textit{Trimmed Mean}, và \textit{Krum}.
+    \item \textbf{Lưu trữ:} Server tự động ghi lại trạng thái huấn luyện vào tệp \texttt{state/metrics.json} sau mỗi vòng đánh giá.
+\end{itemize}
+
+\subsubsection{Cấu hình phía Máy khách (Client Side)}
+Client (\texttt{client.py}) được khởi chạy trên các tiến trình riêng biệt để mô phỏng môi trường phân tán.
+\begin{itemize}
+    \item \textbf{Định danh:} Mỗi client được gán một ID (\texttt{--cid}) để hệ thống phân chia dữ liệu Non-IID phù hợp.
+    \item \textbf{Chọn mô hình:} Client có thể chuyển đổi linh hoạt giữa mô hình \textit{Logistic Regression} (nhẹ) và \textit{MLP} (sâu) thông qua tham số \texttt{--model}.
+    \item \textbf{Bảo mật:} Nếu kích hoạt cờ \texttt{--ssl}, client sẽ sử dụng chứng chỉ CA để xác thực server trước khi gửi bất kỳ tham số nào.
+\end{itemize}
+
+
+
+\subsection{Hiện thực Bảo vệ Riêng tư với Differential Privacy (DP)}
+
+Mặc dù Federated Learning giúp dữ liệu không rời khỏi thiết bị, nhưng các nghiên cứu gần đây cho thấy kẻ tấn công vẫn có thể khôi phục dữ liệu gốc thông qua việc phân tích gradient (Inference Attacks). Để ngăn chặn điều này, chúng tôi tích hợp cơ chế Differential Privacy (DP) sử dụng thư viện Opacus của Meta Research.
+
+\subsubsection{Cơ chế hoạt động}
+DP được áp dụng ở cấp độ Client (Client-level DP) cho mô hình `dp-mlp`. Quy trình huấn luyện được sửa đổi như sau:
+\begin{enumerate}
+    \item \textbf{Gradient Clipping:} Trước khi cập nhật trọng số, gradient của từng mẫu dữ liệu ($g$) được cắt ngọn để đảm bảo chuẩn (norm) của nó không vượt quá ngưỡng $C$ (\texttt{--dp-max-grad-norm}):
+    $$g \leftarrow g / \max(1, \frac{||g||_2}{C})$$
+    Việc này giới hạn ảnh hưởng tối đa của bất kỳ mẫu dữ liệu đơn lẻ nào lên mô hình.
+    
+    \item \textbf{Noise Addition:} Nhiễu Gaussian $\mathcal{N}(0, \sigma^2C^2)$ được cộng vào tổng các gradient đã cắt, với $\sigma$ là hệ số nhiễu (\texttt{--dp-noise-multiplier}).
+\end{enumerate}
+
+
+
+\subsubsection{Tham số cấu hình}
+Hệ thống thiết lập cơ chế bảo vệ riêng tư thông qua các tham số đầu vào được định nghĩa khi khởi chạy Client:
+
+\begin{itemize}
+    \item \textbf{Hệ số nhiễu (Noise Multiplier):} Quyết định trực tiếp lượng nhiễu Gaussian được thêm vào gradient. Giá trị mặc định trong code là $1.0$.
+    \item \textbf{Ngưỡng cắt gradient ($C$):} Ngưỡng tối đa để thực hiện Gradient Clipping nhằm khống chế độ nhạy cảm của mô hình với bất kỳ mẫu dữ liệu đơn lẻ nào, mặc định trong code là $1.0$.
+    \item \textbf{Kế toán và Đo lường Riêng tư ($\epsilon, \delta$):} Ngân sách riêng tư $\epsilon$ đạt được thực tế không được dùng làm ràng buộc đầu vào trực tiếp để sinh nhiễu, mà được tính toán và báo cáo lại một cách hậu nghiệm (post-facto) thông qua cơ chế Privacy Accountant của Opacus sau khi kết thúc huấn luyện với một mức xác suất rò rỉ thông tin mục tiêu $\delta$ (được đặt mặc định là $1e-5$).
+\end{itemize}
+
+Việc tích hợp Opacus biến trình tối ưu hóa thông thường (Adam/SGD) thành \texttt{DPOptimizer}, đảm bảo các đảm bảo toán học về sự riêng tư được thực thi nghiêm ngặt trong mỗi bước huấn luyện cục bộ.
+
+\subsection{Các Cơ chế Nâng cao Thực thể trong Hệ thống}
+
+Để gia tăng khả năng thực tế của hệ thống Federated Learning trong môi trường thực tiễn chứa nhiều mối đe dọa an ninh mạng và giới hạn tài nguyên mạng, mã nguồn đã hiện thực một loạt tính năng bổ trợ nâng cao:
+
+\begin{enumerate}
+    \item \textbf{Mở rộng thuật toán Robust Aggregation:}
+    Bên cạnh Median và Krum, hệ thống hỗ trợ chiến lược \textbf{Bulyan} và \textbf{Median-of-Means (MoM)} nhằm nâng cao khả năng chống chịu tấn công đầu độc Byzantine từ các client độc hại.
+    
+    \item \textbf{Cơ chế nén mô hình giảm băng thông truyền thông:}
+    \begin{itemize}
+        \item \textbf{Lượng tử hóa tham số (Quantization):} Hỗ trợ lượng tử hóa trọng số về mức độ biểu diễn 4-bit hoặc 8-bit (\texttt{--quantization-bits}) giúp giảm đáng kể kích thước gói tin gửi qua gRPC.
+        \item \textbf{Thưa thớt hóa (Top-k Sparsification):} Chỉ truyền tải tỷ lệ phần trăm $k$ các trọng số có biến thiên lớn nhất (\texttt{--topk-ratio}), bỏ qua các cập nhật nhỏ để tối ưu băng thông.
+    \end{itemize}
+
+    \item \textbf{Cơ chế bảo vệ nâng cao chống tấn công đầu độc:}
+    \begin{itemize}
+        \item \textbf{Giới hạn biên độ cập nhật (Clip Update Norm):} Cắt chuẩn (norm) cập nhật tham số từ client gửi về (\texttt{--max-update-norm}) tránh các trường hợp đẩy gradient cực đại phá hoại mô hình.
+        \item \textbf{Bộ lọc ngoại lai FLANDERS (Z-score Filter):} Sử dụng kiểm định thống kê Z-score trên khoảng cách Euclidean của các cập nhật (\texttt{--flanders-z}) để chủ động phát hiện và loại bỏ các client bất thường trước khi thực hiện tổng hợp.
+    \end{itemize}
+
+    \item \textbf{Hỗ trợ mô hình phi đạo hàm (CatBoost Aggregation):}
+    Cung cấp lớp chiến lược tùy chỉnh \texttt{CatBoostLoggedFedAvg} hỗ trợ đặc biệt cho việc tổng hợp mô hình CatBoost không phụ thuộc vào lan truyền ngược gradient.
+
+    \item \textbf{Bảo đảm tính toàn vẹn (Audit Hash Chain):}
+    Sau mỗi vòng tổng hợp, máy chủ thực hiện băm chuỗi bảo mật SHA-256 trên toàn bộ thông số hiệu năng lưu trữ trong log, tạo ra một sổ cái bất biến để kiểm toán (audit) lịch sử huấn luyện hệ thống, chống lại việc làm giả nhật ký hệ thống.
+
+    \item \textbf{Kế toán và Điều chuẩn tối ưu:}
+    Hỗ trợ thuật toán \textbf{FedProx} (\texttt{--fedprox-mu}) bổ sung số hạng phạt proximal term để xử lý hiện tượng không đồng nhất (heterogeneity) của dữ liệu Non-IID; đồng thời mở rộng đo lường đầy đủ các chỉ số an ninh mạng quan trọng gồm \textbf{ROC-AUC}, \textbf{PR-AUC} và \textbf{Confusion Matrix} (ma trận nhầm lẫn).
+\end{enumerate}
