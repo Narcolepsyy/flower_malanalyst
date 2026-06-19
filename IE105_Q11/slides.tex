@@ -96,4 +96,87 @@
     \end{itemize}
 \end{frame}
 
+\section{Phương pháp Thực hiện}
+
+\begin{frame}{Xử lý dữ liệu \& Tiền xử lý tại Biên}
+    \begin{itemize}
+        \item \textbf{Bộ dữ liệu bộ nhớ RAM Obfuscated-MalMem2022:}
+        \begin{itemize}
+            \item 58,596 bản ghi, cân bằng giữa lớp Lành tính (Benign) và Mã độc (Malicious).
+            \item 55 đặc trưng số học (sau khi loại bỏ \texttt{Class} và \texttt{Category}).
+        \end{itemize}
+        \item \textbf{Quy trình tiền xử lý:}
+        \begin{enumerate}
+            \item \textbf{Data Cleaning}: Loại bỏ các nhãn định danh họ mã độc.
+            \item \textbf{Normalization}: Chuẩn hóa Z-score scaling đưa dữ liệu về $\mu=0, \sigma=1$.
+            \item \textbf{Partitioning}: Phân chia dữ liệu cho các client sử dụng phân phối Dirichlet với hệ số $\alpha = 0.5$ (thiết lập môi trường Non-IID).
+        \end{enumerate}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Kiến trúc Mô hình Lai (Hybrid QNN)}
+    \begin{block}{Kiến trúc "Bánh kẹp" (Sandwich)}
+        \begin{enumerate}
+            \item \textbf{Classical Encoder:} Mạng nơ-ron tuyến tính giảm chiều:
+            $$55 \xrightarrow{\text{Linear}} 64 \xrightarrow{\text{ReLU}} 16 \xrightarrow{\text{ReLU}} 4 \xrightarrow{\text{Tanh}} \xrightarrow{\times \pi} \text{Rotation Angles}$$
+            \item \textbf{Quantum Layer (VQC):} Mạch 4-qubit:
+            \begin{itemize}
+                \item Nhúng góc \textit{AngleEmbedding} (cổng xoay $R_x$).
+                \item Biến phân vướng víu \textit{BasicEntanglerLayers} ($2$ lớp biến phân).
+                \item Đo lường giá trị kỳ vọng Pauli-Z ($\langle PauliZ \rangle$) trên qubit 0.
+            \end{itemize}
+            \item \textbf{Head Classifier:} Lớp tuyến tính ($1 \rightarrow 1$) kết hợp hàm mất mát \textit{BCEWithLogitsLoss}.
+        \end{enumerate}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Huấn luyện \& Tính toán Gradient Lượng tử}
+    \begin{itemize}
+        \item Giao diện PyTorch tích hợp qua PennyLane \texttt{qnn.TorchLayer} giúp truyền tải tham số trong Flower trong suốt.
+        \item \textbf{Tính toán Gradient trong Huấn luyện:}
+        \begin{itemize}
+            \item \textbf{Giả lập (Simulator):} Sử dụng bộ giả lập \texttt{default.qubit} với lan truyền ngược trực tiếp (\texttt{diff\_method="backprop"}) để tối ưu tốc độ CPU.
+            \item \textbf{Vật lý (QPU):} Định hình sử dụng phương pháp \textit{Parameter-Shift Rule} dịch chuyển góc quay $\pm s$ để tính đạo hàm:
+            $$\frac{\partial f}{\partial \theta} \approx \frac{f(\theta + s) - f(\theta - s)}{2 \sin(s)}$$
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Cơ chế bảo mật Differential Privacy (DP)}
+    \begin{itemize}
+        \item Tích hợp thư viện \textbf{Opacus} chuyển đổi optimizer thành \texttt{DPOptimizer}.
+        \item \textbf{Quy trình bảo mật gradient:}
+        \begin{enumerate}
+            \item Cắt chuẩn gradient cục bộ của từng mẫu (Gradient Clipping).
+            \item Cộng nhiễu Gaussian được điều khiển bởi hệ số \texttt{--dp-noise-multiplier}.
+        \end{enumerate}
+        \item \textbf{Tính toán Ngân sách Riêng tư ($\epsilon, \delta$):}
+        Epsilon không ràng buộc đầu vào mà được đo lường hậu nghiệm (post-facto) thông qua cơ chế Privacy Accountant của Opacus sau khi huấn luyện.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Bảo mật Kênh truyền \& Các Cơ chế Nâng cao}
+    \begin{itemize}
+        \item \textbf{Secure Channel (TLS Phía Máy chủ):}
+        Sử dụng gRPC bảo mật qua Root CA nội bộ cấp phát chứng chỉ SSL/TLS cho máy chủ (\texttt{server.crt}), tích hợp SAN tránh lỗi xác thực domain.
+        \item \textbf{Các Cơ chế Nâng cao Đã Hiện thực:}
+        \begin{itemize}
+            \item \textbf{Giảm băng thông:} Lượng tử hóa tham số (4/8-bit), thưa thớt hóa Top-k.
+            \item \textbf{Chống độc độc:} Giới hạn biên độ gradient, bộ lọc thống kê ngoại lai Z-score (FLANDERS).
+            \item \textbf{Kiểm toán}: Chuỗi băm audit bảo mật SHA-256 trên log hiệu năng qua từng vòng.
+            \item \textbf{Tối ưu hóa \& Phân tích}: Thuật toán FedProx xử lý dữ liệu Non-IID; đo lường ROC-AUC, PR-AUC và Confusion Matrix.
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Giao diện Giám sát Dashboard thời gian thực}
+    \begin{itemize}
+        \item Backend được xây dựng bằng Flask (\path{dashboard_interactive.py}).
+        \item Kiến trúc tách biệt dựa trên tệp JSON chia sẻ (\path{state/metrics.json} và \path{state/explanations.json}).
+        \item \textbf{API chính}: `/api/status` và `/api/run`.
+        \item \textbf{Cơ chế Polling AJAX}: Cập nhật trạng thái định kỳ 1 giây, nạp kết quả XAI định kỳ 5 giây.
+        \item Trực quan hóa qua Plotly.js (đồ thị hiệu năng) và Chart.js (đồ thị cột XAI).
+    \end{itemize}
+\end{frame}
+
 \end{document}
