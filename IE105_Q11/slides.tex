@@ -179,4 +179,100 @@
     \end{itemize}
 \end{frame}
 
+\section{Thực nghiệm \& Kết quả}
+
+\begin{frame}{Thực nghiệm: So sánh Chiến lược Tổng hợp}
+    Đánh giá hiệu năng huấn luyện phân tán (Logistic Regression, IID, 2 clients, 5 rounds):
+    \begin{table}
+        \centering
+        \begin{tabular}{|l|c|c|c|c|c|}
+            \hline
+            \textbf{Strategy} & \textbf{Accuracy} & \textbf{F1-Score} & \textbf{Precision} & \textbf{Recall} & \textbf{Loss} \\ \hline
+            FEDAVG & 0.9983 & 0.9983 & 0.9981 & 0.9985 & 0.0090 \\ \hline
+            MEDIAN & 0.9983 & 0.9983 & 0.9981 & 0.9985 & 0.0090 \\ \hline
+            KRUM & 0.9983 & 0.9983 & 0.9977 & 0.9989 & 0.0090 \\ \hline
+        \end{tabular}
+        \caption{So sánh hiệu năng giữa các chiến lược tổng hợp}
+    \end{table}
+    \begin{itemize}
+        \item Trong điều kiện dữ liệu IID sạch không có tấn công, cả ba chiến lược đều hội tụ hiệu quả về cùng kết quả tối ưu toàn cục ($\approx 99.83\%$), đúng như kỳ vọng lý thuyết.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Thực nghiệm: Centralized vs. FL cho Hybrid QNN}
+    So sánh mô hình Hybrid QNN trong hai kịch bản huấn luyện:
+    \begin{table}
+        \centering
+        \begin{tabular}{|l|c|c|}
+            \hline
+            \textbf{Chỉ số (Metric)} & \textbf{Centralized (Notebook)} & \textbf{Federated Learning} \\ \hline
+            Số vòng lặp & 30 Epochs & 5 Rounds \\ \hline
+            \textbf{Độ chính xác (Accuracy)} & $\approx 93.75\%$ & \textbf{99.92\%} \\ \hline
+            Thời gian tổng cộng & $\approx 120$s & $\approx 65$s \\ \hline
+            Bảo mật dữ liệu & Không & \textbf{Có (Dữ liệu tại chỗ)} \\ \hline
+        \end{tabular}
+        \caption{So sánh Centralized vs. Federated Learning cho Hybrid QNN}
+    \end{table}
+    \begin{itemize}
+        \item \textbf{Giải thích độ chính xác lượng tử:} Độ chính xác cao ($\approx 99.92\%$) thực chất phần lớn phụ thuộc vào năng lực trích xuất phi tuyến mạnh mẽ của bộ mã hóa cổ điển ($55 \rightarrow 64 \rightarrow 16 \rightarrow 4$) trước khi đi qua mạch lượng tử (bottleneck đo 1 qubit).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Thực nghiệm: Giải thích Đặc trưng (XAI)}
+    Sử dụng XAI trích xuất trọng số của mô hình toàn cục ở vòng 5:
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{table}
+                \centering
+                \scalebox{0.75}{
+                    \begin{tabular}{|l|l|c|}
+                        \hline
+                        \textbf{Hạng} & \textbf{Tên đặc trưng} & \textbf{Điểm số} \\ \hline
+                        1 & \texttt{pslist.avg\_threads} & 1.3751 \\ \hline
+                        2 & \texttt{modules.nmodules} & 1.1942 \\ \hline
+                        3 & \texttt{svcscan.process\_services} & 1.1857 \\ \hline
+                        4 & \texttt{svcscan.shared\_process\_services} & 1.0359 \\ \hline
+                        5 & \texttt{handles.nmutant} & 0.9672 \\ \hline
+                    \end{tabular}
+                }
+                \caption{Top đặc trưng quan trọng}
+            \end{table}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Phân tích an ninh mạng:}
+            \begin{itemize}
+                \item \texttt{pslist.avg\_threads}: Mã độc Ransomware, Spyware thường tạo nhiều luồng song song để phá hoại hệ thống.
+                \item \texttt{svcscan.*}: Dấu hiệu đăng ký dịch vụ để tự khởi chạy cùng hệ thống (Persistence).
+                \item \texttt{handles.nmutant}: Sử dụng Mutex đồng bộ hóa và duy trì độc quyền chạy.
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Kết luận}
+
+\begin{frame}{Kết luận \& Hướng phát triển}
+    \begin{block}{Kết quả Đạt được}
+        \begin{itemize}
+            \item Triển khai thành công hệ thống Học liên kết phát hiện mã độc bộ nhớ.
+            \item Xây dựng mô hình Hybrid QNN có khả năng hội tụ nhanh, giải quyết giới hạn phần cứng lượng tử thông qua khối mã hóa cổ điển.
+            \item Tích hợp Dashboard Flask trực quan hóa real-time và XAI.
+        \end{itemize}
+    \end{block}
+    \begin{block}{Hướng Phát triển Tiếp theo}
+        \begin{itemize}
+            \item Kết nối các bộ xử lý lượng tử thực tế (QPU) qua Amazon Braket, IBM Quantum.
+            \item Thử nghiệm mở rộng số lượng client lớn qua Docker/Kubernetes.
+            \item Đóng gói triển khai trên các thiết bị biên vật lý thực tế (Raspberry Pi).
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}
+    \centering
+    \Huge \color{UITnavy} \textbf{CẢM ƠN THẦY VÀ CÁC BẠN LẮNG NGHE!}\\
+    \vspace{1cm}
+    \normalsize Nhóm Q11 - Khoa Mạng máy tính và Truyền thông - UIT
+\end{frame}
+
 \end{document}
