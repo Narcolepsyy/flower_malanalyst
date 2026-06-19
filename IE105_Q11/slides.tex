@@ -36,4 +36,64 @@
     \tableofcontents
 \end{frame}
 
+\section{Bối cảnh \& Lý thuyết}
+
+\begin{frame}{Bối cảnh \& Động lực Đề tài}
+    \begin{itemize}
+        \item \textbf{Mối đe dọa an ninh mạng:} Mã độc đa hình và kỹ thuật che giấu hành vi trong bộ nhớ RAM (\textit{Obfuscated-MalMem2022}).
+        \item \textbf{Hạn chế của mô hình tập trung (Centralized Learning):}
+        \begin{itemize}
+            \item Nguy cơ rò rỉ dữ liệu nhạy cảm của người dùng (rào cản GDPR, CCPA).
+            \item Chi phí băng thông lớn khi truyền tải dữ liệu thô về máy chủ trung tâm.
+        \end{itemize}
+        \item \textbf{Giải pháp Học liên kết (Federated Learning - FL):} Di chuyển tính toán đến nơi có dữ liệu, bảo mật thông tin tại biên.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Kiến trúc Tổng quan Hệ thống}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.85\textwidth]{asset/download.jpeg}
+        \caption{Sơ đồ phân tán gRPC FL kết hợp Web Dashboard}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Học Liên kết \& Tối ưu hóa FedAvg}
+    \begin{block}{Bài toán Tối ưu hóa Toàn cục}
+        $$\min_{w \in \mathbb{R}^d} f(w) = \sum_{k=1}^{K} p_k F_k(w)$$
+        Trong đó $p_k = \frac{n_k}{n}$, $F_k(w)$ là hàm mất mát cục bộ của client $k$.
+    \end{block}
+    \begin{itemize}
+        \item \textbf{FedAvg (Federated Averaging):}
+        \begin{enumerate}
+            \item Server phát tham số toàn cục $w_t$ đến các client.
+            \item Client huấn luyện cục bộ qua $E$ epochs và gửi $w_{t+1}^k$ về Server.
+            \item Server tính trung bình trọng số cập nhật: $w_{t+1} = \sum p_k w_{t+1}^k$.
+        \end{enumerate}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Chiến lược Tổng hợp Bền vững (Byzantine-Robust)}
+    Đối mặt với nguy cơ bị đầu độc mô hình từ các client độc hại:
+    \begin{itemize}
+        \item \textbf{Median:} Lấy trung vị từng tọa độ của các gradient gửi về.
+        \item \textbf{Trimmed Mean:} Loại bỏ tỷ lệ $\beta$ các cập nhật biên lớn/nhỏ trước khi tính trung bình.
+        \item \textbf{Krum:} Chọn ra một cập nhật mô hình thực tế có khoảng cách Euclidean nhỏ nhất đến số đông lân cận.
+        \item \textbf{Bulyan \& Median-of-Means (MoM):} Loại bỏ các cập nhật phá hoại quy mô lớn, gia tăng tính bền vững hệ thống.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Cơ sở Máy học Lượng tử (QML)}
+    \begin{itemize}
+        \item \textbf{Qubit \& Nguyên lý Lượng tử:} Trạng thái chồng chập $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ kết hợp sự vướng víu giúp mở rộng không gian biểu diễn phi tuyến.
+        \item \textbf{Khảo sát lý thuyết ba kiến trúc tiêu biểu:}
+        \begin{itemize}
+            \item Mạng nơ-ron tích chập lượng tử (QCNN).
+            \item Phân tích thành phần chính lượng tử (QPCA).
+            \item Mạng Perceptron đa lớp lượng tử (QMLP).
+        \end{itemize}
+        \item \textbf{Ứng dụng thực tế:} Hiện thực hóa một mô hình mạng nơ-ron lượng tử lai (Hybrid QNN) 4-qubit.
+    \end{itemize}
+\end{frame}
+
 \end{document}
