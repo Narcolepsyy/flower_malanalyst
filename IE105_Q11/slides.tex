@@ -53,7 +53,7 @@
 \begin{frame}{Kiến trúc Tổng quan Hệ thống}
     \begin{figure}
         \centering
-        \includegraphics[width=0.85\textwidth]{asset/download.jpeg}
+        \includegraphics[height=0.6\textheight,keepaspectratio]{asset/download.jpeg}
         \caption{Sơ đồ phân tán gRPC FL kết hợp Web Dashboard}
     \end{figure}
 \end{frame}
@@ -203,6 +203,7 @@
     So sánh mô hình Hybrid QNN trong hai kịch bản huấn luyện:
     \begin{table}
         \centering
+        \scalebox{0.92}{
         \begin{tabular}{|l|c|c|}
             \hline
             \textbf{Chỉ số (Metric)} & \textbf{Centralized (Notebook)} & \textbf{Federated Learning} \\ \hline
@@ -211,20 +212,21 @@
             Thời gian tổng cộng & $\approx 120$s & $\approx 65$s \\ \hline
             Bảo mật dữ liệu & Không & \textbf{Có (Dữ liệu tại chỗ)} \\ \hline
         \end{tabular}
+        }
         \caption{So sánh Centralized vs. Federated Learning cho Hybrid QNN}
     \end{table}
     \begin{itemize}
-        \item \textbf{Giải thích độ chính xác lượng tử:} Độ chính xác cao ($\approx 99.92\%$) thực chất phần lớn phụ thuộc vào năng lực trích xuất phi tuyến mạnh mẽ của bộ mã hóa cổ điển ($55 \rightarrow 64 \rightarrow 16 \rightarrow 4$) trước khi đi qua mạch lượng tử (bottleneck đo 1 qubit).
+        \item \textbf{Giải thích độ chính xác lượng tử:} Độ chính xác cao ($\approx 99.92\%$) thực chất phần lớn phụ thuộc vào năng lực trích xuất phi tuyến mạnh mẽ của bộ mã hóa cổ điển ($55 \to \allowbreak 64 \to \allowbreak 16 \to \allowbreak 4$) trước khi đi qua mạch lượng tử (bottleneck đo 1 qubit).
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Thực nghiệm: Giải thích Đặc trưng (XAI)}
     Sử dụng XAI trích xuất trọng số của mô hình toàn cục ở vòng 5:
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
+    \begin{columns}[onlytextwidth]
+        \begin{column}{0.44\textwidth}
             \begin{table}
                 \centering
-                \scalebox{0.75}{
+                \scalebox{0.55}{
                     \begin{tabular}{|l|l|c|}
                         \hline
                         \textbf{Hạng} & \textbf{Tên đặc trưng} & \textbf{Điểm số} \\ \hline
@@ -238,7 +240,7 @@
                 \caption{Top đặc trưng quan trọng}
             \end{table}
         \end{column}
-        \begin{column}{0.5\textwidth}
+        \begin{column}{0.53\textwidth}
             \textbf{Phân tích an ninh mạng:}
             \begin{itemize}
                 \item \texttt{pslist.avg\_threads}: Mã độc Ransomware, Spyware thường tạo nhiều luồng song song để phá hoại hệ thống.
@@ -266,6 +268,12 @@
             \item Đóng gói triển khai trên các thiết bị biên vật lý thực tế (Raspberry Pi).
         \end{itemize}
     \end{block}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Tài liệu Tham khảo}
+    \nocite{*}
+    \bibliographystyle{ieeetr}
+    \bibliography{ref}
 \end{frame}
 
 \begin{frame}
