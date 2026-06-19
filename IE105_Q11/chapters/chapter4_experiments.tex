@@ -190,7 +190,10 @@ Bảng dưới đây liệt kê 10 đặc trưng có điểm số quan trọng (
 \end{tabular}
 \end{table}
 
-\textit{\textbf{Lưu ý về tái lập:} Bảng trên được trích xuất từ kết quả giải thích mô hình Logistic Regression trong một phiên thực nghiệm trước đó. Artifact hiện tại trong \texttt{state/explanations.json} chứa kết quả của mô hình MLP (round 3) với các score bị triệt tiêu ($\approx 0$) do hiện tượng bão hòa gradient. Để tái lập bảng này, cần chạy lại module XAI với mô hình logreg đã hội tụ: \texttt{python explain.py --model logreg --top-k 10}.}
+\textit{\textbf{Lưu ý về tái lập:} Bảng trên được trích xuất từ kết quả giải thích mô hình Logistic Regression trong một phiên thực nghiệm trước đó. Artifact hiện tại trong \path{state/explanations.json} chứa kết quả của mô hình MLP (round 3) với các score bị triệt tiêu ($\approx 0$) do hiện tượng bão hòa gradient. Để tái lập bảng này, cần chạy lại module XAI với mô hình logreg đã hội tụ bằng lệnh:}
+\begin{center}
+\texttt{python explain.py --model logreg --top-k 10}
+\end{center}
 
 
 
@@ -199,16 +202,16 @@ Dựa trên kết quả XAI, chúng ta có thể thấy mô hình đã tập tru
 
 \begin{enumerate}
     \item \textbf{Hành vi bất thường của Tiến trình (Process Anomalies):}
-    Đặc trưng quan trọng nhất là \texttt{pslist.avg\_threads} (1.38). Mã độc, đặc biệt là Ransomware hoặc Spyware, thường tạo ra nhiều luồng (threads) để thực hiện song song việc mã hóa dữ liệu hoặc quét hệ thống, dẫn đến số lượng luồng trung bình cao bất thường so với phần mềm sạch.
+    Đặc trưng quan trọng nhất là \path{pslist.avg_threads} (1.38). Mã độc, đặc biệt là Ransomware hoặc Spyware, thường tạo ra nhiều luồng (threads) để thực hiện song song việc mã hóa dữ liệu hoặc quét hệ thống, dẫn đến số lượng luồng trung bình cao bất thường so với phần mềm sạch.
     
     \item \textbf{Cơ chế duy trì sự tồn tại (Persistence \& Services):}
-    Sự xuất hiện dày đặc của nhóm \texttt{svcscan} (như \texttt{process\_services}, \texttt{shared\_process\_services}) cho thấy mô hình phát hiện ra nỗ lực của mã độc trong việc đăng ký các dịch vụ (services) để tự động khởi chạy cùng hệ thống hoặc ẩn mình dưới dạng các dịch vụ chia sẻ (svchost.exe giả mạo).
+    Sự xuất hiện dày đặc của nhóm \texttt{svcscan} (như \path{process_services}, \path{shared_process_services}) cho thấy mô hình phát hiện ra nỗ lực của mã độc trong việc đăng ký các dịch vụ (services) để tự động khởi chạy cùng hệ thống hoặc ẩn mình dưới dạng các dịch vụ chia sẻ (svchost.exe giả mạo).
     
     \item \textbf{Dấu hiệu của kỹ thuật che giấu (Obfuscation Indicators):}
-    Đặc trưng \texttt{handles.nthread} (0.58) phản ánh số lượng luồng hoạt động trong tiến trình. Bên cạnh đó, các đặc trưng như \texttt{ldrmodules.not\_in\_load} (và \texttt{not\_in\_mem}) tuy nằm ngoài top 10 nhưng cũng là những chỉ dấu (indicators) rõ ràng của kỹ thuật \textbf{Process Hollowing} hoặc \textbf{DLL Injection}, nơi mã độc tiêm mã vào bộ nhớ nhưng không liên kết (unlink) với danh sách module đã tải của hệ điều hành để tránh bị phát hiện bởi các công cụ quét đĩa.
+    Đặc trưng \path{handles.nthread} (0.58) phản ánh số lượng luồng hoạt động trong tiến trình. Bên cạnh đó, các đặc trưng như \path{ldrmodules.not_in_load} (và \path{not_in_mem}) tuy nằm ngoài top 10 nhưng cũng là những chỉ dấu (indicators) rõ ràng của kỹ thuật \textbf{Process Hollowing} hoặc \textbf{DLL Injection}, nơi mã độc tiêm mã vào bộ nhớ nhưng không liên kết (unlink) với danh sách module đã tải của hệ điều hành để tránh bị phát hiện bởi các công cụ quét đĩa.
     
     \item \textbf{Đồng bộ hóa và Tài nguyên:}
-    Đặc trưng \texttt{handles.nmutant} (Mutex) phản ánh việc mã độc sử dụng các đối tượng Mutex để đảm bảo chỉ có một phiên bản mã độc chạy tại một thời điểm (tránh xung đột) hoặc để giao tiếp giữa các tiến trình độc hại.
+    Đặc trưng \path{handles.nmutant} (Mutex) phản ánh việc mã độc sử dụng các đối tượng Mutex để đảm bảo chỉ có một phiên bản mã độc chạy tại một thời điểm (tránh xung đột) hoặc để giao tiếp giữa các tiến trình độc hại.
 \end{enumerate}
 
 \textbf{Kết luận XAI:} Kết quả giải thích này khẳng định rằng mô hình Federated Learning không chỉ đạt độ chính xác cao nhờ "học vẹt" các thông số ngẫu nhiên, mà thực sự đã nắm bắt được các dấu hiệu hành vi (behavioral signatures) đặc trưng của mã độc ẩn mình trong bộ nhớ.
@@ -221,14 +224,14 @@ Dựa trên kết quả XAI, chúng ta có thể thấy mô hình đã tập tru
 Khác với các hệ thống truyền thống tích hợp chặt chẽ việc ghi log vào cơ sở dữ liệu, hệ thống này sử dụng cơ chế giao tiếp bất đồng bộ qua tệp JSON chia sẻ:
 
 \begin{enumerate}
-    \item \textbf{Producer (Server Flower):} Sau mỗi vòng tổng hợp (Aggregation Round), Server ghi đè các chỉ số mới nhất (Accuracy, Loss, F1) vào tệp \texttt{state/metrics.json} và kết quả giải thích mô hình vào \texttt{state/explanations.json}.
+    \item \textbf{Producer (Server Flower):} Sau mỗi vòng tổng hợp (Aggregation Round), Server ghi đè các chỉ số mới nhất (Accuracy, Loss, F1) vào tệp \path{state/metrics.json} và kết quả giải thích mô hình vào \path{state/explanations.json}.
     \item \textbf{Consumer (Flask Dashboard):} Ứng dụng Flask chạy trên một tiến trình độc lập, liên tục đọc các tệp JSON này để cập nhật giao diện.
 \end{enumerate}
 
 Ưu điểm của thiết kế này là nếu Dashboard gặp sự cố, quá trình huấn luyện FL vẫn diễn ra bình thường và ngược lại.
 
 \subsubsection{Hiện thực Backend (Flask)}
-Mã nguồn thực thi chính nằm tại \texttt{dashboard\_interactive.py} (khởi tạo qua CLI \texttt{flmal-dashboard}), trong khi \texttt{dashboard.py} và \texttt{dashboard\_flask.py} đóng vai trò là các lớp tương thích (shim layer). Backend Flask phục vụ các API chính:
+Mã nguồn thực thi chính nằm tại \path{dashboard_interactive.py} (khởi tạo qua CLI \path{flmal-dashboard}), trong khi \path{dashboard.py} và \path{dashboard_flask.py} đóng vai trò là các lớp tương thích (shim layer). Backend Flask phục vụ các API chính:
 \begin{itemize}
     \item \textbf{Route hiển thị (\texttt{/}):} Trả về giao diện tương tác HTML/CSS/JS.
     \item \textbf{API Trạng thái (\texttt{/api/status}):} Trả về trạng thái chi tiết của các tiến trình huấn luyện cục bộ và toàn cục, kết quả đánh giá mô hình cũng như thông số cấu hình thời gian thực.
