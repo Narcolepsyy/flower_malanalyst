@@ -1,0 +1,34 @@
+services:
+  server:
+    build: .
+    command: python server.py --address 0.0.0.0:8080 --rounds 3 --min-clients 2 --agg-method median --reset-metrics
+    volumes:
+      - .:/app
+    ports:
+      - "8080:8080"
+
+  client0:
+    build: .
+    command: python client.py --server-address server:8080 --cid 0 --num-clients 2 --model logreg --epochs 1
+    depends_on:
+      - server
+    volumes:
+      - .:/app
+
+  client1:
+    build: .
+    command: python client.py --server-address server:8080 --cid 1 --num-clients 2 --model logreg --epochs 1
+    depends_on:
+      - server
+    volumes:
+      - .:/app
+
+  dashboard:
+    build: .
+    command: python dashboard_interactive.py --host 0.0.0.0 --port 8503
+    depends_on:
+      - server
+    volumes:
+      - .:/app
+    ports:
+      - "8503:8503"

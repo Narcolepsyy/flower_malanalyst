@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "federated-malware"
+version = "0.1.0"
+description = "Federated learning for malware detection"
+requires-python = ">=3.12"
+
+[project.scripts]
+flmal-server = "federated_malware.cli.server:main"
+flmal-client = "federated_malware.cli.client:main"
+flmal-prepare = "federated_malware.cli.prepare_partitions:main"
+flmal-experiments = "federated_malware.cli.experiments:main"
+flmal-dashboard = "federated_malware.cli.dashboard:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [".venv", "notebooks", "state", "ray_results"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_unused_ignores = false
+packages = ["federated_malware"]
+follow_imports = "silent"
+disable_error_code = ["override", "arg-type", "assignment", "attr-defined"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short -q"
+
